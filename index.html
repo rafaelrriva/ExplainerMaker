@@ -144,6 +144,8 @@ body[data-kind=vin] .ek{display:none}body:not([data-kind=vin]) .vk{display:none}
           <div><label for="dur">Duração (s)</label><input type="number" id="dur" min="1" max="90" step="0.5" value="20"></div>
           <div><label for="asp">Proporção</label><select id="asp"><option value="169">16:9 · 1280×720</option><option value="916">9:16 · 720×1280 (Reels)</option><option value="11">1:1 · 1080×1080</option></select></div>
         </div>
+        <label for="eng">Motor de animação <span class="hint">— como a peça é animada</span></label>
+        <select id="eng"><option value="canvas">Canvas puro (texturas do estilo, como a referência)</option><option value="gsap">GSAP (HTML/SVG, SplitText, DrawSVG, MorphSVG)</option><option value="anime">Anime.js v4 (HTML/SVG, leve)</option><option value="hybrid">Canvas + GSAP (fundo em canvas, logo e texto em SVG por cima)</option></select>
         <label for="lang">Idioma do texto na tela</label><select id="lang"><option>Português (Brasil)</option><option>English</option><option>Español</option><option>Bilíngue PT/EN</option></select>
         <div class="ek"><label for="snd2">Som</label>
         <select id="snd2"><option value="full">Mix completo, sem narração</option><option value="vo">Com narração (efeitos mais baixos + roteiro de locução)</option><option value="none">Sem som</option></select></div>
@@ -343,7 +345,7 @@ function vinSound(from){
 
 function vinName(){ if(!cur)return; const base=PT_NAMES[cur.name]||cur.name; const fl=($('vtech').value!=='auto'&&VTECH2FLAV[$('vtech').value])||VFLAV[cur.id]; $('sname').textContent=KIND==='vin'&&fl?base+' · '+VFLAV_PT[fl]:base; }
 /* ---------------- prompt builder ---------------- */
-const FIELDS=['topic','script','aud','lang','facts','take','notes','dur','asp','snd2','plang','vtype','vname','vtag','vlogo','vtech','vcol','vcta','vaud','vplat','vnotes'];
+const FIELDS=['eng','topic','script','aud','lang','facts','take','notes','dur','asp','snd2','plang','vtype','vname','vtag','vlogo','vtech','vcol','vcta','vaud','vplat','vnotes'];
 const CHK=['sb','mp4','src','vfile','vloop'];
 let KIND='exp', durExp=20;
 function save(){ try{ const o={}; FIELDS.forEach(f=>o[f]=$(f).value); CHK.forEach(c=>o[c]=$(c).checked); o.sk=[...document.querySelectorAll('.sk')].map(x=>x.checked); o.kind=KIND; o.idk=IDK; o.durExp=durExp; localStorage.setItem('ees-brief',JSON.stringify(o)); }catch(e){} }
@@ -476,11 +478,56 @@ ${snd==='vo'?'- Narração: escreva também o roteiro de locução com tempo de 
   emit(P, 1+(src?1:0)+(snd!=='none'?1:0));
 }
 function emit(P,tail){
+  { const L=$('plang').value, eb=engBlock(L); if(eb){ P=P.slice(); P.splice(P.length-tail,0,eb); } }
   const full=P.join('\n\n')+'\n';
   $('out').textContent=full.length>60000?full.slice(0,60000)+`\n\n… (${(full.length-60000).toLocaleString('pt-BR')} caracteres a mais — o botão Copiar leva o prompt inteiro)`:full;
   $('out')._full=full; $('out')._brief=P.slice(0,P.length-tail).join('\n\n');
   $('stats').textContent=`${full.length.toLocaleString('pt-BR')} caracteres · ~${Math.round(full.length/3.6/1000)} mil tokens`;
 }
+
+const ENG={
+ gsap:{en:`ANIMATION ENGINE: GSAP
+- Build the piece with GSAP 3 (free for commercial use, all plugins included) animating HTML/SVG elements in a fixed-size stage (${'{W}'}x${'{H}'}, scaled to fit), not a canvas. Load from the CDN: https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js plus the plugins you use (SplitText, DrawSVGPlugin, MorphSVGPlugin, CustomEase from the same /dist/ folder) and register them.
+- ONE master timeline, created paused: const tl = gsap.timeline({ paused: true }). Every tween lives on it at an explicit position (seconds); no autoplay tweens, no delayedCall, no setTimeout, no onComplete chains, no ScrollTrigger, no repeat:-1 outside the timeline.
+- Wire it to the player: window.DURATION = tl.duration(); window.seek = (t) => tl.seek(t, false); the play button drives t with requestAnimationFrame and calls seek(t), so the picture is always a pure function of t (keep the same function name the rest of this prompt asks for as a thin wrapper that calls seek).
+- Wait for document.fonts.ready before SplitText, and split once (not per frame). Logos: inline the official SVG paths; DrawSVG for draw-on, MorphSVG for icon→wordmark, never distort the geometry.
+- Keep the chosen style's look with CSS (colours, fonts, gradients, grain as an overlay image or SVG filter).
+- For the MP4: render frame by frame with window.seek(i/30) and a screenshot of the stage (puppeteer page.screenshot of the stage element), not with live playback.`,
+ pt:`MOTOR DE ANIMAÇÃO: GSAP
+- Construa a peça com GSAP 3 (gratuito para uso comercial, com todos os plugins) animando elementos HTML/SVG num palco de tamanho fixo ({W}x{H}, escalado para caber), não num canvas. Carregue pelo CDN: https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js e os plugins que usar (SplitText, DrawSVGPlugin, MorphSVGPlugin, CustomEase, na mesma pasta /dist/) e registre-os.
+- UMA timeline mestre, criada pausada: const tl = gsap.timeline({ paused: true }). Todo tween fica nela numa posição explícita (em segundos); nada de tweens com autoplay, delayedCall, setTimeout, encadeamento por onComplete, ScrollTrigger ou repeat:-1 fora da timeline.
+- Ligue ao player: window.DURATION = tl.duration(); window.seek = (t) => tl.seek(t, false); o botão de play avança t com requestAnimationFrame e chama seek(t), para a imagem ser sempre função pura de t (mantenha o nome de função que o resto deste prompt pede, como um invólucro que chama seek).
+- Espere document.fonts.ready antes do SplitText e divida uma vez só (não a cada quadro). Logos: SVG oficial inline; DrawSVG para traço, MorphSVG para ícone→logotipo, sem nunca distorcer a geometria.
+- Mantenha a cara do estilo escolhido com CSS (cores, fontes, gradientes, grão como imagem sobreposta ou filtro SVG).
+- No MP4: renderize quadro a quadro com window.seek(i/30) e captura do palco (page.screenshot do elemento do palco no puppeteer), não com a reprodução ao vivo.`},
+ anime:{en:`ANIMATION ENGINE: Anime.js v4
+- Build the piece with Anime.js v4 (v4 API only: import { createTimeline, animate, stagger, splitText, svg } from 'https://cdn.jsdelivr.net/npm/animejs/+esm'; never the v3 anime() / anime.timeline() syntax) animating HTML/SVG elements in a fixed-size stage ({W}x{H}, scaled to fit), not a canvas.
+- ONE timeline created with autoplay: false; every animation is added to it at an explicit position (ms). No free-running animate() calls, no setTimeout, no loop: true outside the timeline.
+- Wire it to the player: window.DURATION = tl.duration / 1000; window.seek = (t) => tl.seek(t * 1000); the play button drives t with requestAnimationFrame and calls seek(t), so the picture is always a pure function of t (keep the function name the rest of this prompt asks for as a thin wrapper that calls seek).
+- Wait for document.fonts.ready before splitText. Logos: inline the official SVG paths; svg.createDrawable for draw-on, svg.morphTo for morphs, never distort the geometry.
+- Keep the chosen style's look with CSS (colours, fonts, gradients, grain as an overlay).
+- For the MP4: render frame by frame with window.seek(i/30) and a screenshot of the stage, not with live playback.`,
+ pt:`MOTOR DE ANIMAÇÃO: Anime.js v4
+- Construa a peça com Anime.js v4 (só a API v4: import { createTimeline, animate, stagger, splitText, svg } from 'https://cdn.jsdelivr.net/npm/animejs/+esm'; nunca a sintaxe v3 anime() / anime.timeline()) animando elementos HTML/SVG num palco de tamanho fixo ({W}x{H}, escalado para caber), não num canvas.
+- UMA timeline criada com autoplay: false; toda animação entra nela numa posição explícita (ms). Nada de animate() rodando solto, setTimeout ou loop: true fora da timeline.
+- Ligue ao player: window.DURATION = tl.duration / 1000; window.seek = (t) => tl.seek(t * 1000); o botão de play avança t com requestAnimationFrame e chama seek(t), para a imagem ser sempre função pura de t (mantenha o nome de função que o resto deste prompt pede, como um invólucro que chama seek).
+- Espere document.fonts.ready antes do splitText. Logos: SVG oficial inline; svg.createDrawable para traço, svg.morphTo para morph, sem nunca distorcer a geometria.
+- Mantenha a cara do estilo escolhido com CSS (cores, fontes, gradientes, grão sobreposto).
+- No MP4: renderize quadro a quadro com window.seek(i/30) e captura do palco, não com a reprodução ao vivo.`},
+ hybrid:{en:`ANIMATION ENGINE: Canvas + GSAP (two layers)
+- Bottom layer: a {W}x{H} canvas drawn exactly as the rest of this prompt describes (the style's medium, textures and finishing passes, every frame a pure function of t).
+- Top layer: an absolutely positioned SVG/HTML stage of the same size for the logo and the text, animated with GSAP 3 (CDN https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js plus SplitText / DrawSVGPlugin / MorphSVGPlugin as needed, all free). The logo stays vector-sharp with its official geometry.
+- ONE GSAP timeline created paused. A single window.seek(t) draws the canvas at t AND calls tl.seek(t, false), so both layers stay locked together; no autoplay tweens, setTimeout or onComplete chains.
+- Match the layers: text and logo pick up the medium's colours and, where it helps, a light SVG filter (grain, ink bleed, glow) so they sit in the style instead of floating on top.
+- For the MP4: per frame call window.seek(i/30) and screenshot the whole stage (canvas + overlay), not the canvas alone.`,
+ pt:`MOTOR DE ANIMAÇÃO: Canvas + GSAP (duas camadas)
+- Camada de baixo: um canvas de {W}x{H} desenhado exatamente como o resto deste prompt descreve (o meio do estilo, texturas e passes de acabamento, todo quadro função pura de t).
+- Camada de cima: um palco SVG/HTML posicionado por cima, do mesmo tamanho, para o logo e os textos, animado com GSAP 3 (CDN https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js e SplitText / DrawSVGPlugin / MorphSVGPlugin se precisar, todos gratuitos). O logo fica vetorial e nítido, com a geometria oficial.
+- UMA timeline GSAP criada pausada. Um único window.seek(t) desenha o canvas em t E chama tl.seek(t, false), para as duas camadas andarem travadas juntas; nada de tweens com autoplay, setTimeout ou encadeamento por onComplete.
+- Combine as camadas: texto e logo pegam as cores do meio e, quando ajudar, um filtro SVG leve (grão, tinta escorrida, brilho), para fazerem parte do estilo em vez de flutuar por cima.
+- No MP4: a cada quadro chame window.seek(i/30) e capture o palco inteiro (canvas + camada de cima), não só o canvas.`}
+};
+function engBlock(L){ const e=ENG[$('eng').value]; if(!e) return null; const A=ASP[$('asp').value]; const pre=$('eng').value==='hybrid'?'':(L==='en'?'(This section overrides the canvas-specific instructions above: keep their timing, structure, style and checks, but build with this engine.)\n':'(Esta seção substitui as instruções específicas de canvas acima: mantenha o tempo, a estrutura, o estilo e as checagens delas, mas construa com este motor.)\n'); return pre+e[L].split('{W}').join(A.w).split('{H}').join(A.h); }
 /* ---------------- identidades ---------------- */
 const IDS={
   generico:{nome:'Genérico',name:'',cores:'',bg:'',logo:'',info:'Sem identidade fixa: o estilo escolhido define cores e letras.'},
