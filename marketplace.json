@@ -1,0 +1,12 @@
+{
+  "name": "explainer-maker",
+  "owner": { "name": "rafaelrriva" },
+  "plugins": [
+    {
+      "name": "motion-vinheta",
+      "description": "Skills de motion, explainer e vinheta usadas pelo Estúdio de Explainers.",
+      "source": "./",
+      "skills": ["./skills"]
+    }
+  ]
+}
