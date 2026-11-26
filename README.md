@@ -20,6 +20,7 @@ e acesse http://localhost:8000.
 
 ## Estrutura
 - `index.html`: o estúdio inteiro (estilos, prévia, formulário e geração do prompt).
+- `styles.json`: os 13 estilos (código de animação, som e textos). Obrigatório.
 - `logos/`: logos usados nos cartões de identidade.
 
 As preferências ficam salvas no `localStorage` do navegador.
