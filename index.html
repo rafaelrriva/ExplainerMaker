@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estúdio de Explainers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap">
+<style>
+/* VOICE: a confident studio console — precise, quiet, the films do the shouting.
+   IDEA: a Swiss production timetable / film slate: the chosen style plays live, everything else is a schedule around it.
+   PICTURE: the selected style's reference film running full width at the top, with transport controls.
+   COLOUR and TYPE: white, black, signal red #e4002b, one grey; night #0e0e0e. Archivo wide 800 + Archivo.
+   LAYOUT: thick top rule; film + style rail; then brief form in two columns; then the generated prompt with Copy. */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#0e0e0e);--ink:light-dark(#111111,#f2f2f2);--grey:light-dark(#6b6b6b,#9a9a9a);--line:light-dark(#dcdcdc,#2c2c2c);--soft:light-dark(#f3f3f3,#181818);--red:#e4002b}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Archivo,system-ui,sans-serif;overflow-x:clip;border-top:10px solid var(--ink)}
+.band{padding:clamp(20px,3.4vw,48px) max(4vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font:800 clamp(32px,4.6vw,52px)/1.05 Archivo;font-stretch:112%;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font:800 26px/1.1 Archivo;font-stretch:112%;margin:0 0 14px}
+.lede{color:var(--grey);max-width:68ch;margin:10px 0 0}
+.stage{background:#000;position:relative;aspect-ratio:16/9;overflow:hidden}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%}
+.load{position:absolute;inset:0;display:grid;place-items:center;color:#bbb;font-size:15px}
+.transport{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 0;border-bottom:2px solid var(--ink)}
+.transport input[type=range]{flex:1 1 200px;accent-color:var(--red)}
+.time{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--grey);font-size:15px}
+button,.btn{font:600 15px Archivo;min-height:44px;padding:0 16px;border:2px solid var(--ink);background:var(--bg);color:var(--ink);cursor:pointer}
+button:hover{background:var(--soft)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+button.primary{background:var(--red);border-color:var(--red);color:#fff}
+.seg{display:inline-flex}.seg button{border-width:2px}.seg button+button{margin-left:-2px}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.card{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;margin-top:14px}
+.card .fam{color:var(--red);font-weight:700;font-size:14px}
+.card .nm{font:800 28px/1.08 Archivo;font-stretch:112%}
+.card p{margin:0;color:var(--grey);font-size:15px}
+.form{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:clamp(20px,3vw,44px)}
+label{display:block;font-weight:700;font-size:15px;margin:14px 0 5px}
+.hint{font-weight:400;color:var(--grey);font-size:13px}
+input[type=text],input[type=number],select,textarea{width:100%;font:16px/1.45 Archivo;color:var(--ink);background:var(--bg);border:2px solid var(--line);padding:10px 12px}
+textarea{resize:vertical;min-height:150px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.presets button{min-height:36px;font-size:14px;padding:0 10px;border-width:1px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.chk{display:flex;gap:10px;align-items:flex-start;font-weight:400;margin:8px 0}.chk input{width:20px;height:20px;margin-top:2px;accent-color:var(--red);flex:none}
+fieldset{border:0;border-top:2px solid var(--ink);padding:8px 0 0;margin:22px 0 0}legend{font-weight:800;padding:0 8px 0 0;font-size:17px}
+.out{border-top:10px solid var(--ink)}
+.outbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.stats{color:var(--grey);font-size:14px;white-space:nowrap}
+pre{background:var(--soft);border-left:4px solid var(--red);padding:16px;max-height:560px;overflow:auto;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:20px}
+.steps div{border-top:2px solid var(--line);padding-top:8px;color:var(--grey);font-size:15px}.steps b{color:var(--ink);display:block;font-size:16px}
+.kindbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:0}
+.kindbar .seg button{min-height:52px;font-size:18px;padding:0 28px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:22px}
+.th{padding:0;border:3px solid transparent;background:#000;aspect-ratio:16/9;min-height:0;display:block;overflow:hidden}
+.th canvas{width:100%;height:100%;display:block}
+.th[aria-current=true]{border-color:var(--red)}.th:hover{border-color:var(--grey)}
+.sname{font:800 clamp(26px,3vw,36px)/1.1 Archivo;font-stretch:112%;margin:18px 0 14px}
+.ids{display:flex;flex-wrap:wrap;gap:8px}.ids button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.idcard{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;margin-top:12px;padding:14px;border:2px solid var(--line);background:var(--bg)}
+.idcard img{max-width:200px;max-height:70px;padding:8px;border-radius:4px}
+.idcard p{margin:0;font-size:14px;color:var(--grey)}
+.copybar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:26px;padding-top:20px;border-top:2px solid var(--ink)}
+.copybar .primary{min-height:56px;font-size:18px;padding:0 30px}
+details.acc{margin-top:18px;border:2px solid var(--line)}details.acc summary{cursor:pointer;padding:14px 16px;font-weight:700;list-style:none}details.acc summary::before{content:'▸ ';}details.acc[open] summary::before{content:'▾ '}
+details.acc pre{border-left:0;margin:0 12px 12px}
+body[data-kind=vin] .ek{display:none}body:not([data-kind=vin]) .vk{display:none}
+@media(max-width:600px){.thumbs{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.idcard{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){.form,.row,.steps{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<section class="band"><div class="wrap">
+  <div class="kindbar"><span class="seg" role="group" aria-label="Tipo de peça"><button id="kVin" aria-pressed="false">Vinheta</button><button id="kExp" aria-pressed="true">Explainer</button></span><span class="hint" id="kindHint">Vídeo que explica um assunto, de 12 a 30 s</span></div>
+  <div class="thumbs" id="rail" role="group" aria-label="Estilos"></div>
+  <div class="sname" id="sname">…</div>
+  <div class="stage" id="stage"><div class="load" id="load">Carregando estilos…</div></div>
+  <div class="transport">
+    <button id="play" aria-label="Tocar ou pausar">▶ Tocar</button>
+    <span class="seg" role="group" aria-label="O que tocar">
+      <button id="mExp" aria-pressed="true">Explainer de referência</button><button id="mHero" aria-pressed="false">Quadro-herói</button>
+    </span>
+    <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Posição">
+    <span class="time" id="time">0,0 / 0,0 s</span>
+    <button id="snd" aria-pressed="false" aria-label="Som">Som: desligado</button>
+  </div>
+</div></section>
+
+<section class="band" style="background:var(--soft)"><div class="wrap">
+  <h2>Briefing</h2>
+  <label style="margin-top:0">Identidade da marca</label>
+  <div class="ids" id="ids" role="group" aria-label="Identidade"></div>
+  <div class="idcard" id="idcard"></div>
+  <div class="form">
+    <div>
+      <div class="ek">
+      <label for="topic">Tema <span class="hint">— o que o vídeo explica</span></label>
+      <input type="text" id="topic" placeholder="Ex.: Como a vacina ensina o sistema imunológico">
+      <div class="presets" id="presets"></div>
+      <label for="script">Roteiro ou pontos-chave <span class="hint">— um por linha; pode colar um roteiro inteiro</span></label>
+      <textarea id="script" placeholder="1. Gancho: …&#10;2. …"></textarea>
+      <label for="aud">Público</label><input type="text" id="aud" placeholder="Ex.: leigos, 18–35, Instagram">
+      <label for="facts">Fatos e números obrigatórios <span class="hint">— usados exatamente como escritos</span></label>
+      <textarea id="facts" style="min-height:80px" placeholder="Ex.: 95% de eficácia (fonte: …)"></textarea>
+      <label for="take">Frase final / takeaway</label>
+      <input type="text" id="take" placeholder="Ex.: Treino seguro → defesa pronta">
+      <label for="notes">Observações extras <span class="hint">— marca, cores, o que evitar, CTA</span></label>
+      <textarea id="notes" style="min-height:80px"></textarea>
+      </div>
+      <div class="vk">
+      <label for="vtype">Tipo de vinheta</label>
+      <select id="vtype"><option value="intro">Intro de canal / logo sting (3–5 s)</option><option value="bumper">Bumper curto (1–3 s)</option><option value="abertura">Abertura de programa ou quadro (5–8 s)</option><option value="outro">Outro / tela final (20 s)</option><option value="transicao">Transição entre blocos (1–2 s)</option></select>
+      <div class="presets" id="vpresets"></div>
+      <div class="row">
+        <div><label for="vname">Nome da marca ou canal</label><input type="text" id="vname" placeholder="Ex.: Ciência em 60s"></div>
+        <div><label for="vtag">Slogan</label><input type="text" id="vtag" placeholder="Ex.: o mundo explicado rápido"></div>
+      </div>
+      <label for="vlogo">Logo <span class="hint">— descreva formas, cores e letras, ou anexe o arquivo na conversa</span></label>
+      <textarea id="vlogo" style="min-height:80px" placeholder="Ex.: átomo estilizado com três órbitas e um ponto laranja no centro; nome em sans-serif bold"></textarea>
+      <label class="chk"><input type="checkbox" id="vfile"> Vou anexar o arquivo do logo (SVG ou PNG) junto com o prompt</label>
+      <div class="row">
+        <div><label for="vtech">Revelação do logo</label><select id="vtech"><option value="auto">O Claude escolhe a melhor</option><option value="draw">Traço se desenhando</option><option value="build">Montagem peça por peça</option><option value="mask">Máscara / wipe</option><option value="morph">Ícone vira o nome (morph)</option><option value="letters">Letra por letra</option></select></div>
+        <div><label for="vcol">Cores da marca</label><input type="text" id="vcol" placeholder="Ex.: #FF6B00, azul-marinho, branco"></div>
+      </div>
+      <label for="vcta">Texto extra <span class="hint">— nome do quadro, chamada, “Inscreva-se”…</span></label>
+      <input type="text" id="vcta">
+      <div class="row">
+        <div><label for="vaud">Assinatura sonora</label><select id="vaud"><option value="synth">Criar no estilo (sintetizada)</option><option value="own">Vou fornecer meu áudio</option><option value="none">Sem som</option></select></div>
+        <div><label for="vplat">Onde vai passar</label><select id="vplat"><option value="youtube">YouTube</option><option value="social">Reels / TikTok / Shorts</option><option value="tv">TV / broadcast</option><option value="evento">Telão / evento</option></select></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="vloop"> Fazer também uma versão em loop (tela de espera, fundo de live)</label>
+      <label for="vnotes">Observações extras</label>
+      <textarea id="vnotes" style="min-height:70px"></textarea>
+      </div>
+    </div>
+    <div>
+      <fieldset><legend>Formato</legend>
+        <div class="row">
+          <div><label for="dur">Duração (s)</label><input type="number" id="dur" min="1" max="90" step="0.5" value="20"></div>
+          <div><label for="asp">Proporção</label><select id="asp"><option value="169">16:9 · 1280×720</option><option value="916">9:16 · 720×1280 (Reels)</option><option value="11">1:1 · 1080×1080</option></select></div>
+        </div>
+        <label for="lang">Idioma do texto na tela</label><select id="lang"><option>Português (Brasil)</option><option>English</option><option>Español</option><option>Bilíngue PT/EN</option></select>
+        <div class="ek"><label for="snd2">Som</label>
+        <select id="snd2"><option value="full">Mix completo, sem narração</option><option value="vo">Com narração (efeitos mais baixos + roteiro de locução)</option><option value="none">Sem som</option></select></div>
+        <label for="plang">Idioma das instruções do prompt</label>
+        <select id="plang"><option value="en">English (original, mais fiel)</option><option value="pt">Português</option></select>
+      </fieldset>
+      <fieldset><legend>Processo</legend>
+        <label class="chk"><input type="checkbox" id="sb" checked> Storyboard visual primeiro e esperar minha aprovação</label>
+        <label class="chk"><input type="checkbox" id="mp4" checked> Renderizar MP4 se houver shell (Claude Code)</label>
+        <label class="chk"><input type="checkbox" id="src" checked> Incluir o código de referência completo <span class="hint">(desmarque para um prompt curto)</span></label>
+      </fieldset>
+      <fieldset><legend>Reforços das motion skills</legend>
+        <label class="chk"><input type="checkbox" class="sk" value="grid" checked> Beat grid e lista de eventos como dados (imagem e som pelo mesmo relógio)</label>
+        <label class="chk ek"><input type="checkbox" class="sk" value="logic" checked> Lógica de história: cada beat causado pelo anterior</label>
+        <label class="chk"><input type="checkbox" class="sk" value="ease" checked> Princípios de animação e easing</label>
+        <label class="chk"><input type="checkbox" class="sk" value="layout" checked> Texto nunca colide com texto ou objeto-chave</label>
+        <label class="chk ek"><input type="checkbox" class="sk" value="sound" checked> Som sem susto (máx. +6 dB num corte)</label>
+        <label class="chk ek"><input type="checkbox" class="sk" value="qc" checked> Autoverificação com contact sheet antes de entregar</label>
+        <label class="chk vk"><input type="checkbox" class="sk" value="vrules" checked> Regras de vinheta: o logo bate no frame exato do som</label>
+        <label class="chk vk"><input type="checkbox" class="sk" value="vlogo" checked> Revelação de logo: uma técnica, geometria intacta, quadro final limpo</label>
+        <label class="chk vk"><input type="checkbox" class="sk" value="vtype" checked> Tipografia cinética: máscara, escalonamento e tempos certos</label>
+        <label class="chk"><input type="checkbox" class="sk" value="skills"> <span id="skillsTxt">Seguir as skills javascript-animation, soundtrack e explainer-video se estiverem instaladas</span></label>
+      </fieldset>
+    </div>
+  </div>
+</div></section>
+
+<section class="band" style="background:var(--soft);padding-top:0"><div class="wrap">
+  <div class="copybar">
+    <span class="stats" id="stats"></span>
+    <span style="display:flex;gap:8px;flex-wrap:wrap"><button id="copyShort">Copiar sem código</button><button class="primary" id="copy">Copiar prompt</button></span>
+  </div>
+  <details class="acc"><summary>Ver o prompt gerado</summary><pre id="out" tabindex="0"></pre></details>
+</div></section>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+let DATA=null, cur=null, mode='exp', playing=false, t=0, last=0, soundOn=false, stopSound=null, canvas=null, ctx=null;
+const loaded={}, fontLinks={};
+window.STYLES=window.STYLES||[];
+const PRESETS=[
+ ['Fotossíntese','Como as plantas transformam luz em açúcar','1. Gancho: uma folha é uma fábrica movida a luz\n2. Entram: luz, água (raiz) e CO₂ (estômatos)\n3. No cloroplasto, a clorofila captura a luz\n4. A água é quebrada e libera O₂\n5. O CO₂ vira glicose (ciclo de Calvin)\n6. Saem: glicose para a planta, oxigênio para o ar','6CO₂ + 6H₂O + luz → C₆H₁₂O₆ + 6O₂','Luz entra, vida sai'],
+ ['Pix','Como um Pix chega em 3 segundos','1. Gancho: dinheiro que atravessa o país em segundos\n2. Você digita a chave\n3. O DICT do Banco Central encontra a conta de destino\n4. O SPI liquida entre os bancos\n5. O recebedor é avisado','Liquidação em até 10 s, 24/7 (Banco Central)','Chave → BC → conta, em segundos'],
+ ['Juros compostos','Por que juros compostos crescem tão rápido','1. Gancho: o mesmo dinheiro, dois finais diferentes\n2. Juros simples: soma fixa todo ano\n3. Juros compostos: juros sobre juros\n4. A curva começa lenta e dispara\n5. O tempo é o ingrediente principal','R$ 1.000 a 10% a.a.: 10 anos ≈ R$ 2.594; 30 anos ≈ R$ 17.449','Comece cedo: o tempo faz o trabalho pesado'],
+];
+const PT_NAMES={'Artificial intelligence':'Gráfico editorial (jornal)'};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toast=m=>{const e=$('toast');e.textContent=m;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1800)};
+
+function addFonts(st){ if(fontLinks[st.id])return; const l=document.createElement('link'); l.rel='stylesheet'; l.href=st.link; document.head.appendChild(l); fontLinks[st.id]=l; }
+async function ensure(st){
+  if(loaded[st.id]) return loaded[st.id];
+  addFonts(st);
+  const before=window.STYLES.length;
+  try{ new Function(st.source)(); }catch(e){ console.error(st.id,e); }
+  const obj=window.STYLES[window.STYLES.length-1];
+  if(window.STYLES.length===before||!obj) throw new Error('style failed: '+st.id);
+  try{ await Promise.race([Promise.all((obj.fonts||[]).map(f=>document.fonts.load(f,'AaZz09 ãçé'))),new Promise(r=>setTimeout(r,4000))]); }catch(e){}
+  return (loaded[st.id]=obj);
+}
+function frame(obj,cv,tt,m){
+  const c=cv.getContext('2d',{willReadFrequently:!!obj.readsPixels});
+  c.setTransform(1,0,0,1,0,0); c.globalAlpha=1; c.globalCompositeOperation='source-over'; c.filter='none';
+  c.clearRect(0,0,cv.width,cv.height); c.save(); c.scale(cv.width/1280,cv.height/720);
+  try{ (m==='exp'&&obj.explainer?obj.explainer:obj.draw).call(obj,c,1280,720,tt); }catch(e){ console.error(e); }
+  c.restore();
+}
+const dur=()=>{const o=loaded[cur?.id]; if(!o)return 1; return mode==='exp'&&o.explainer?(o.explainerDuration||15):(o.duration||5)};
+
+function renderRail(){
+  $('rail').innerHTML=DATA.styles.map((s,i)=>`<button class="sty th" data-i="${i}" aria-current="false" aria-label="${esc(PT_NAMES[s.name]||s.name)}" title="${esc(PT_NAMES[s.name]||s.name)}"><canvas width="320" height="180"></canvas></button>`).join('');
+  $('rail').querySelectorAll('.sty').forEach(b=>b.addEventListener('click',()=>select(+b.dataset.i,true)));
+}
+async function thumbs(){
+  const bs=[...$('rail').querySelectorAll('.sty')];
+  for(const b of bs){
+    const st=DATA.styles[+b.dataset.i];
+    try{ const o=await ensure(st); await new Promise(r=>setTimeout(r,30));
+      const big=document.createElement('canvas'); big.width=1280; big.height=720; frame(o,big,o.frameT??(o.duration||5)*0.9,'hero');
+      const tc=b.querySelector('canvas'), tx=tc.getContext('2d'); tx.imageSmoothingQuality='high'; tx.drawImage(big,0,0,tc.width,tc.height); }catch(e){}
+  }
+}
+async function select(i,user){
+  const st=DATA.styles[i]; cur=st; halt();
+  $('rail').querySelectorAll('.sty').forEach(b=>b.setAttribute('aria-current',+b.dataset.i===i));
+  $('sname').textContent=PT_NAMES[st.name]||st.name;
+  $('load').style.display='grid'; $('load').textContent='Preparando “'+(PT_NAMES[st.name]||st.name)+'”…';
+  if(user){ try{history.replaceState(null,'','#'+st.id)}catch(e){} }
+  try{localStorage.setItem('ees-style',st.id)}catch(e){}
+  build();
+  const o=await ensure(st); if(cur!==st) return;
+  if(canvas) canvas.remove();
+  canvas=document.createElement('canvas'); canvas.width=1280; canvas.height=720; $('stage').prepend(canvas);
+  $('load').style.display='none';
+  t=mode==='exp'?(user?0:3.5):(o.frameT??0); draw(); if(user) play();
+}
+function draw(){ const o=loaded[cur?.id]; if(!o||!canvas)return; frame(o,canvas,t,mode); const D=dur();
+  $('scrub').value=Math.round(t/D*1000); $('time').textContent=t.toFixed(1).replace('.',',')+' / '+D.toFixed(1).replace('.',',')+' s'; }
+function loop(now){ if(!playing)return; const dt=Math.min(.1,(now-last)/1000); last=now; t+=dt; const D=dur();
+  if(t>=D){ t=0; restartSound(); } draw(); requestAnimationFrame(loop); }
+function restartSound(){ if(stopSound){stopSound();stopSound=null} const o=loaded[cur?.id];
+  if(playing&&soundOn&&mode==='exp'&&o&&o.explainerSound&&window.SOUND){ try{ stopSound=SOUND.live(o.explainerSound.bind(o),t,{voiceover:false}); }catch(e){console.error(e)} } }
+function play(){ if(!loaded[cur?.id])return; playing=true; $('play').textContent='❚❚ Pausar'; last=performance.now(); restartSound(); requestAnimationFrame(loop); }
+function halt(){ playing=false; $('play').textContent='▶ Tocar'; if(stopSound){stopSound();stopSound=null} }
+$('play').addEventListener('click',()=>playing?halt():play());
+$('scrub').addEventListener('input',e=>{ t=e.target.value/1000*dur(); draw(); if(playing) restartSound(); });
+function setMode(m){ mode=m; $('mExp').setAttribute('aria-pressed',m==='exp'); $('mHero').setAttribute('aria-pressed',m==='hero'); const o=loaded[cur?.id]; t=playing?0:(m==='exp'?3.5:(o?.frameT??0)); draw(); if(playing) restartSound(); }
+$('mExp').addEventListener('click',()=>setMode('exp')); $('mHero').addEventListener('click',()=>setMode('hero'));
+$('snd').addEventListener('click',()=>{ soundOn=!soundOn; $('snd').setAttribute('aria-pressed',soundOn); $('snd').textContent='Som: '+(soundOn?'ligado':'desligado'); restartSound(); if(soundOn&&mode!=='exp') toast('O som toca no explainer de referência'); });
+document.addEventListener('keydown',e=>{ if(e.target.closest('input,textarea,select'))return; if(e.code==='Space'&&e.target===document.body){e.preventDefault();playing?halt():play()} });
+
+$('presets').innerHTML=PRESETS.map((p,i)=>`<button data-p="${i}">Exemplo: ${esc(p[0])}</button>`).join('');
+$('presets').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{const p=PRESETS[+b.dataset.p];$('topic').value=p[1];$('script').value=p[2];$('facts').value=p[3];$('take').value=p[4];build();save()}));
+
+/* ---------------- prompt builder ---------------- */
+const FIELDS=['topic','script','aud','lang','facts','take','notes','dur','asp','snd2','plang','vtype','vname','vtag','vlogo','vtech','vcol','vcta','vaud','vplat','vnotes'];
+const CHK=['sb','mp4','src','vfile','vloop'];
+let KIND='exp', durExp=20;
+function save(){ try{ const o={}; FIELDS.forEach(f=>o[f]=$(f).value); CHK.forEach(c=>o[c]=$(c).checked); o.sk=[...document.querySelectorAll('.sk')].map(x=>x.checked); o.kind=KIND; o.idk=IDK; o.durExp=durExp; localStorage.setItem('ees-brief',JSON.stringify(o)); }catch(e){} }
+function restore(){ try{ const o=JSON.parse(localStorage.getItem('ees-brief')||'null'); if(!o)return; FIELDS.forEach(f=>{if(o[f]!=null)$(f).value=o[f]}); CHK.forEach(c=>{if(o[c]!=null)$(c).checked=o[c]}); if(o.sk) document.querySelectorAll('.sk').forEach((x,i)=>{if(o.sk[i]!=null)x.checked=o.sk[i]}); if(o.durExp) durExp=o.durExp; if(o.kind==='vin') KIND='vin'; if(o.idk&&IDS[o.idk]) IDK=o.idk; }catch(e){} }
+
+const ASP={'169':{w:1280,h:720,en:'A 1280x720 canvas (16:9)',pt:'Um canvas de 1280x720 (16:9)'},
+           '916':{w:720,h:1280,en:'A 720x1280 canvas (vertical 9:16, for Reels/Shorts/TikTok; recompose every beat for vertical, keep the top and bottom 10% free of key text for the app UI)',pt:'Um canvas de 720x1280 (vertical 9:16, para Reels/Shorts/TikTok; recomponha cada beat na vertical e deixe os 10% de cima e de baixo livres de texto importante por causa da interface do app)'},
+           '11':{w:1080,h:1080,en:'A 1080x1080 canvas (square 1:1)',pt:'Um canvas de 1080x1080 (quadrado 1:1)'}};
+function brief(L){
+  const v=f=>$(f).value.trim(), EN=L==='en', out=[];
+  if(!v('topic')&&!v('script')) return EN?'[Describe your topic, or paste your script here. If this is left as is, ask me for it before building.]':'[Descreva o tema ou cole o roteiro aqui. Se isto ficar assim, me pergunte antes de construir.]';
+  if(v('topic')) out.push((EN?'Topic: ':'Tema: ')+v('topic'));
+  if(v('script')) out.push((EN?'Script / key points:\n':'Roteiro / pontos-chave:\n')+v('script'));
+  if(v('aud')) out.push((EN?'Audience: ':'Público: ')+v('aud'));
+  out.push(EN?`On-screen text language: ${v('lang')}. Write every on-screen word in this language (check that every accent and glyph renders in the style's fonts).`:`Idioma do texto na tela: ${v('lang')}. Escreva toda palavra na tela neste idioma (confira se todo acento e glifo aparece nas fontes do estilo).`);
+  if(v('facts')) out.push((EN?'Facts and numbers to show (use exactly as written):\n':'Fatos e números a mostrar (use exatamente como escritos):\n')+v('facts'));
+  if(v('take')) out.push((EN?'Takeaway (the final line): ':'Frase final (takeaway): ')+v('take'));
+  if(v('notes')) out.push((EN?'Notes: ':'Observações: ')+v('notes'));
+  return out.join('\n');
+}
+const SKILL={
+ grid:{en:'Beat grid as data: write the beats and every visible event as arrays of times in the page (e.g. BEATS, EVENTS) and drive both explainer() and scoreSound() from them, so picture and sound land together by construction.',pt:'Beat grid como dados: escreva os beats e cada evento visível como listas de tempos na página (ex.: BEATS, EVENTS) e faça explainer() e scoreSound() lerem delas, para imagem e som caírem juntos por construção.'},
+ logic:{en:'Story logic: every beat is caused by the one before (not "A, then B" but "A causes B"); show the metaphor in the picture, not only in a label; one idea per beat.',pt:'Lógica de história: cada beat é causado pelo anterior (não "A, depois B", mas "A causa B"); mostre a metáfora na imagem, não só num rótulo; uma ideia por beat.'},
+ ease:{en:'Animation principles: ease-out for entrances, ease-in for exits, ease-in-out for moves within frame; overshoot only on pops; anticipate big moves; stagger related items by 40-80 ms; nothing moves linearly except counters and mechanical loops; endings hold after motion has settled.',pt:'Princípios de animação: ease-out para entradas, ease-in para saídas, ease-in-out para movimentos dentro do quadro; overshoot só em "pops"; antecipe movimentos grandes; escalone itens relacionados em 40-80 ms; nada se move linear, exceto contadores e loops mecânicos; o final segura depois que o movimento assenta.'},
+ layout:{en:'Layout: no text ever overlaps other text or a key object; keep a list of the boxes each beat claims and place labels where they are free.',pt:'Layout: nenhum texto se sobrepõe a outro texto ou a um objeto-chave; mantenha uma lista das áreas que cada beat ocupa e coloque os rótulos onde houver espaço livre.'},
+ sound:{en:'Sound must not startle: no more than about +6 dB into any cut versus the second before; mark scene changes with a chord or timbre change rather than volume; bring layers in one or two at a time.',pt:'O som não pode assustar: no máximo cerca de +6 dB num corte em relação ao segundo anterior; marque trocas de cena com mudança de acorde ou timbre, não de volume; traga as camadas uma ou duas por vez.'},
+ qc:{en:'Self-check before delivering: render a contact sheet (one frame per second) and a still at each beat\'s key moment; check there are no blank frames, every beat reads in one second as a thumbnail, every number matches the facts above, and every visible action has its sound. Fix and check again.',pt:'Autoverificação antes de entregar: gere um contact sheet (um quadro por segundo) e um still no momento-chave de cada beat; confira que não há quadros vazios, que cada beat se entende em um segundo como miniatura, que todo número bate com os fatos acima e que toda ação visível tem seu som. Corrija e confira de novo.'},
+ vrules:{en:'Vinheta rules: the brand is confirmed and then gets out of the way. The logo must be legible by about 2 s (or by the impact in shorter pieces) and land on its IMPACT frame exactly, not near it, with the sound hit on the same frame. Nothing important within ~10% of any edge.',pt:'Regras de vinheta: a marca se confirma e sai do caminho. O logo precisa estar legível por volta de 2 s (ou no impacto, nas peças mais curtas) e pousar exatamente no frame IMPACT, não perto dele, com a batida do som no mesmo frame. Nada importante a menos de ~10% de qualquer borda.'},
+ vlogo:{en:'Logo reveal: ONE technique only (draw, build, mask, morph or per-letter, not several). Never distort the brand geometry: scale, fade and position are fine, skew and squash are not. Keep the mark\'s clearspace free of motion debris. A small overshoot-and-settle on the hit (scale about 1.04 to 1.00 over ~0.15 s). The final frame is the true, clean mark (no half-drawn strokes) and works as a still poster.',pt:'Revelação do logo: UMA técnica só (traço, montagem, máscara, morph ou letra por letra, não várias). Nunca distorça a geometria da marca: escala, fade e posição podem, inclinar e achatar não. Mantenha a área de respiro do logo livre de restos de movimento. Um pequeno overshoot e assentamento na batida (escala de cerca de 1,04 para 1,00 em ~0,15 s). O último quadro é o logo verdadeiro e limpo (sem traço pela metade) e funciona como pôster estático.'},
+ vtype:{en:'Kinetic type: set the static type right first (display line-height 1.1-1.2, slightly tight tracking). Reveal by line (premium), word (energetic) or character (short strings only) with a mask/clip or blur-in; ease-out entrances; stagger lines 60-100 ms, words 40-70 ms, characters 20-40 ms; total text reveal around 0.8 s.',pt:'Tipografia cinética: acerte primeiro o texto parado (entrelinha 1,1-1,2 nos títulos, espaçamento levemente apertado). Revele por linha (sofisticado), palavra (enérgico) ou letra (só textos curtos) com máscara ou blur-in; entradas com ease-out; escalone linhas em 60-100 ms, palavras em 40-70 ms, letras em 20-40 ms; revelação total do texto por volta de 0,8 s.'},
+ skills:{en:'If the javascript-animation, soundtrack or explainer-video skills are available to you, follow them wherever they do not conflict with this style and these instructions.',pt:'Se as skills javascript-animation, soundtrack ou explainer-video estiverem disponíveis, siga-as onde não conflitarem com este estilo e estas instruções.'},
+};
+const skOn=()=>[...document.querySelectorAll('.sk')].filter(x=>x.checked&&!x.closest(KIND==='vin'?'.ek':'.vk'));
+const skText=(v,L)=>v==='skills'&&KIND==='vin'?(L==='en'?'If the youtube-intro-outro, logo-animation, kinetic-typography, javascript-animation or soundtrack skills are available to you, follow them wherever they do not conflict with this style and these instructions.':'Se as skills youtube-intro-outro, logo-animation, kinetic-typography, javascript-animation ou soundtrack estiverem disponíveis, siga-as onde não conflitarem com este estilo e estas instruções.'):SKILL[v][L];
+function build(){
+  if(!DATA||!cur) return;
+  if(KIND==='vin') return buildVin();
+  const st=cur, L=$('plang').value, EN=L==='en', D=Math.max(8,Math.min(90,+$('dur').value||20)), A=ASP[$('asp').value], snd=$('snd2').value;
+  const sb=$('sb').checked, mp4=$('mp4').checked, src=$('src').checked, ref169=$('asp').value==='169';
+  const sz=ref169?(EN?'at 1280x720':'em 1280x720'):(EN?`at ${A.w}x${A.h}`:`em ${A.w}x${A.h}`);
+  const B=brief(L), P=[];
+  P.push(EN?`I want an animated explainer made in the "${st.name}" visual style (${st.family}). Below is ${src?'the complete source code of a reference animation in this exact style':'the style card of this exact style'}, plus a small sound-effects kit. Use them as your style guide and rebuild it around my content.`
+           :`Quero um explainer animado no estilo visual "${st.name}" (${st.family}). Abaixo está ${src?'o código-fonte completo de uma animação de referência exatamente neste estilo':'o cartão deste estilo'}, mais um pequeno kit de efeitos sonoros. Use-os como guia de estilo e reconstrua tudo em volta do meu conteúdo.`);
+  P.push((EN?'MY CONTENT:\n':'MEU CONTEÚDO:\n')+B);
+  if(idBlock(L)) P.push(idBlock(L));
+  if(sb) P.push(EN?`STORYBOARD FIRST: before building the animation, make a VISUAL storyboard and wait for my OK.
+- One HTML page (show it as an artifact if you can) with a grid of panels, one per beat (about 6-10). Each panel is a canvas showing that beat's key frame drawn in this style: use the H library and the reference's own drawing, texture and finishing functions so the panels already look like the finished piece. Still frames only, no animation or sound yet.
+- Under each panel: the beat number, its start and end time, the exact on-screen text, how it gets there from the previous panel (continuous: which elements carry over and how they move or change; or a scene change: which transition, and why the story wants one), and its key sounds.
+- Below the grid, list any facts or numbers you had to assume.
+When I approve it (or after my changes), build the full animation exactly as storyboarded, reusing the storyboard's drawing code.`
+  :`STORYBOARD PRIMEIRO: antes de construir a animação, faça um storyboard VISUAL e espere meu OK.
+- Uma página HTML (mostre como artefato, se puder) com uma grade de painéis, um por beat (cerca de 6-10). Cada painel é um canvas com o quadro-chave daquele beat desenhado neste estilo: use a biblioteca H e as próprias funções de desenho, textura e acabamento da referência, para os painéis já parecerem a peça final. Só quadros parados, ainda sem animação nem som.
+- Sob cada painel: número do beat, tempo de início e fim, o texto exato na tela, como se chega nele a partir do painel anterior (contínuo: quais elementos continuam e como se movem ou mudam; ou troca de cena: qual transição e por que a história pede uma) e seus sons principais.
+- Abaixo da grade, liste fatos ou números que você precisou supor.
+Quando eu aprovar (ou depois das minhas mudanças), construa a animação completa exatamente como no storyboard, reaproveitando o código de desenho dele.`);
+  else P.push(EN?'NO STORYBOARD STOP: plan the beats yourself (number, start/end time, on-screen text, transition, key sounds), keep that plan as data in the file, and build the full animation directly. List any facts or numbers you had to assume when you deliver.'
+                :'SEM PARADA PARA STORYBOARD: planeje os beats você mesmo (número, início/fim, texto na tela, transição, sons principais), guarde esse plano como dados no arquivo e construa a animação completa direto. Na entrega, liste fatos ou números que precisou supor.');
+  const soundBul = snd==='none'
+    ? (EN?'- No sound: leave out scoreSound and the sound toggle, and expose `window.scoreSound = null`.':'- Sem som: deixe de fora scoreSound e o botão de som, e exponha `window.scoreSound = null`.')
+    : (EN?`- A \`scoreSound(k)\` function that schedules the sound effects with the SOUND kit below (see SOUND). Play it in sync from the player: on play call \`stopSound = SOUND.live(scoreSound, currentT, { voiceover: ${snd==='vo'} })\`, and call \`stopSound()\` on pause, on seek and when the sound toggle is turned off.`
+         :`- Uma função \`scoreSound(k)\` que agenda os efeitos com o kit SOUND abaixo (ver SOM). Toque em sincronia pelo player: ao dar play chame \`stopSound = SOUND.live(scoreSound, currentT, { voiceover: ${snd==='vo'} })\` e chame \`stopSound()\` ao pausar, ao pular no tempo e ao desligar o som.`);
+  P.push(EN?`WHAT TO BUILD
+One self-contained HTML file (show it as an artifact if you can):
+- ${A.en}, scaled to fit the window with letterboxing, and a small control bar: play/pause, a scrub slider, the current time${snd==='none'?'':', a sound on/off toggle'}, and loop on by default.
+- A new \`explainer(ctx, W, H_, t)\` that tells MY CONTENT in this style. Aim for about ${D} seconds unless my content clearly needs more; set the length in a DURATION constant.
+${soundBul}
+- Include the H helper library ${snd==='none'?'':'and the SOUND kit '}below unchanged, and keep the reference's own helper functions where they are useful.
+- Load these Google Fonts before the first draw (await document.fonts.load for each spec you use): ${st.fontsLine}
+  <link rel="stylesheet" href="${st.link}">
+- Expose \`window.seek = (t) => { /* draw frame at time t */ }\`, \`window.DURATION\` and \`window.scoreSound\`, so the animation can be rendered frame by frame to video later.`
+  :`O QUE CONSTRUIR
+Um único arquivo HTML autocontido (mostre como artefato, se puder):
+- ${A.pt}, escalado para caber na janela com letterbox, e uma pequena barra de controle: play/pause, slider de tempo, tempo atual${snd==='none'?'':', botão de som liga/desliga'} e loop ligado por padrão.
+- Uma nova \`explainer(ctx, W, H_, t)\` que conta MEU CONTEÚDO neste estilo. Mire em cerca de ${D} segundos, a não ser que o conteúdo claramente peça mais; defina a duração numa constante DURATION.
+${soundBul}
+- Inclua a biblioteca H ${snd==='none'?'':'e o kit SOUND '}abaixo sem alterações, e mantenha as funções auxiliares da referência onde forem úteis.
+- Carregue estas Google Fonts antes do primeiro desenho (await document.fonts.load para cada especificação usada): ${st.fontsLine}
+  <link rel="stylesheet" href="${st.link}">
+- Exponha \`window.seek = (t) => { /* desenha o quadro no tempo t */ }\`, \`window.DURATION\` e \`window.scoreSound\`, para a animação poder ser renderizada quadro a quadro em vídeo depois.`);
+  P.push(EN?`HOW TO STAY IN THE STYLE
+- Reuse the reference's rendering techniques, palette, textures, lettering, line quality, arrows, labels, number treatment, transitions and timing feel. Change the story, the text and the things being drawn; do not change the medium.
+- Draw every subject accurately for my topic. Don't carry over the reference's props and drawing recipes (its characters, robots, cats and dogs, rings, icons) unless they genuinely fit, and double-check that the science and facts shown in the visuals are right.
+- The surface texture and finishing passes are what make the style read as the real medium (paper grain, ink pooling, misregistration, grain, glow, scanlines and so on). Copy those functions from the reference and run them on every frame at the same strength. Don't simplify or skip them to save effort.
+- Every frame is a pure function of t: create all randomness from H.rng(seed) / H.makeNoise(seed) inside the draw (never Math.random), so the same t always gives the same frame. Caching static textures across frames is fine.
+- It is video, often watched on a phone: ${sz} keep headlines >= 44px, every label or caption the story depends on >= 28px (including small annotations and the corner header), key numbers >= 64px, and frame each beat so it fills most of the screen. Keep frames fast (well under 100 ms each if you can).${ref169?'':' The reference was composed for 1280x720: re-lay out every beat for this frame instead of cropping it.'}
+- In the reference, \`explainer()\` is the explainer (it explains "How does AI learn?"), \`draw()\` is the single hero frame of the style, and \`explainerSound(k)\` is its sound design. Study them, but do not reuse that topic unless my content asks for it.`
+  :`COMO FICAR NO ESTILO
+- Reaproveite as técnicas de renderização, paleta, texturas, letras, qualidade de linha, setas, rótulos, tratamento de números, transições e sensação de ritmo da referência. Mude a história, o texto e o que é desenhado; não mude o meio.
+- Desenhe cada assunto com precisão para o meu tema. Não traga os objetos e receitas de desenho da referência (personagens, robôs, gatos e cachorros, anéis, ícones) a menos que façam sentido de verdade, e confira se a ciência e os fatos mostrados estão corretos.
+- As texturas de superfície e os passes de acabamento é que fazem o estilo parecer o meio real (granulação do papel, acúmulo de tinta, desregistro, grão, brilho, scanlines etc.). Copie essas funções da referência e rode-as em todo quadro com a mesma intensidade. Não simplifique nem pule para poupar esforço.
+- Todo quadro é função pura de t: gere toda aleatoriedade com H.rng(seed) / H.makeNoise(seed) dentro do desenho (nunca Math.random), para o mesmo t sempre dar o mesmo quadro. Guardar texturas estáticas em cache entre quadros é permitido.
+- É vídeo, muitas vezes visto no celular: ${sz} mantenha títulos >= 44px, todo rótulo ou legenda de que a história depende >= 28px (inclusive anotações pequenas e o cabeçalho de canto), números-chave >= 64px, e enquadre cada beat ocupando a maior parte da tela. Mantenha os quadros rápidos (bem abaixo de 100 ms cada, se possível).${ref169?'':' A referência foi composta em 1280x720: recomponha cada beat para este formato em vez de recortar.'}
+- Na referência, \`explainer()\` é o explainer (explica "How does AI learn?"), \`draw()\` é o quadro-herói do estilo e \`explainerSound(k)\` é seu desenho de som. Estude-os, mas não reaproveite esse tema a menos que meu conteúdo peça.`);
+  P.push(EN?`STRUCTURE
+- Structure it like a real explainer, not a title card: a hook that gets out of the way within ~2 s, then beats where something changes every 1-2 s; arrows that draw on to show cause and flow; labels that land on what they label; any full scene change done the medium's own way (see the reference); an emphasis move on the key moment; a short takeaway held ~1 s at the end.
+
+FLOW BETWEEN BEATS
+- Decide beat by beat what the story needs. A new beat does not automatically mean a new scene.
+- When the next idea builds on the last, keep it continuous: elements that matter stay on screen and move, grow, re-arrange or transform into the next idea (a label becomes the next heading, a counter grows into a chart, the camera travels to a new part of the same scene, a shape morphs into the next one).
+- When the story really moves on (a new topic, a jump in time or place, a before/after contrast, a reveal), a full scene change is the right call. Do it the medium's own way, as the reference does.
+- Aim for a mix that fits the content, not a rule: avoid both a hard cut on every beat and forcing everything into one unbroken shot. The reference's own transitions show how this medium changes scene; its scene count is not a template to copy.`
+  :`ESTRUTURA
+- Estruture como um explainer de verdade, não um cartão de título: um gancho que sai do caminho em ~2 s, depois beats em que algo muda a cada 1-2 s; setas que se desenham para mostrar causa e fluxo; rótulos que pousam no que rotulam; qualquer troca total de cena feita do jeito do próprio meio (veja a referência); um movimento de ênfase no momento-chave; um takeaway curto segurado ~1 s no fim.
+
+FLUXO ENTRE BEATS
+- Decida beat a beat o que a história precisa. Um beat novo não significa automaticamente uma cena nova.
+- Quando a próxima ideia se apoia na anterior, mantenha contínuo: elementos importantes ficam na tela e se movem, crescem, se reorganizam ou se transformam na ideia seguinte (um rótulo vira o próximo título, um contador cresce e vira gráfico, a câmera viaja para outra parte da mesma cena, uma forma se transforma na seguinte).
+- Quando a história realmente muda (novo assunto, salto no tempo ou lugar, contraste antes/depois, revelação), a troca total de cena é a escolha certa. Faça do jeito do próprio meio, como a referência.
+- Busque uma mistura que sirva ao conteúdo, não uma regra: evite tanto um corte seco a cada beat quanto forçar tudo num único plano. As transições da referência mostram como este meio troca de cena; o número de cenas dela não é um modelo a copiar.`);
+  if(snd!=='none') P.push(EN?`SOUND (${snd==='vo'?'with voiceover: effects sit under the narration':'no voiceover: a fuller mix'})
+- Sync is everything: a sound starts on the exact frame its event appears, using the same times as the picture.
+- Score the events that land: things popping or stamping on, labels landing, arrows completing, scene transitions, a wrong/right moment, the key number (the biggest hit) and the takeaway landing (a resolving sound).
+- Drawing makes its medium's noise while it draws (marker, chalk, pen strokes matched to the draw-on length; typing while text types; chip blips while game dialog prints). Counters tick at most ~12 times a second, slowing as they settle.
+${snd==='vo'?'- Voiceover: also write the narration script with a start time per line, about 2.5 words per second, timed so each line lands just before the picture it describes; mark minor sounds { minor: true } and leave gaps under the speech.':'- A quiet ambience bed suited to the medium is welcome, and music only if it suits the style (k.music, gain 0.6 or less).'}
+- Keep a hierarchy: effects in front, any bed or music clearly underneath, no more than ~3 sounds at once, and small silences so the big hits read. Medium-true palette, not generic swooshes.`
+  :`SOM (${snd==='vo'?'com narração: efeitos por baixo da voz':'sem narração: um mix mais cheio'})
+- Sincronia é tudo: um som começa no quadro exato em que seu evento aparece, usando os mesmos tempos da imagem.
+- Pontue os eventos que pousam: coisas surgindo ou carimbando, rótulos pousando, setas completando, transições de cena, um momento de erro/acerto, o número-chave (a maior batida) e o takeaway pousando (um som que resolve).
+- O desenho faz o barulho do seu meio enquanto desenha (traços de marcador, giz ou caneta com a duração do traço; digitação enquanto o texto digita; blips de chip enquanto o diálogo de jogo imprime). Contadores fazem tique no máximo ~12 vezes por segundo, desacelerando ao assentar.
+${snd==='vo'?'- Narração: escreva também o roteiro de locução com tempo de início por linha, cerca de 2,5 palavras por segundo, cada fala chegando logo antes da imagem que descreve; marque sons menores com { minor: true } e deixe respiros sob a voz.':'- Uma ambiência discreta adequada ao meio é bem-vinda, e música só se combinar com o estilo (k.music, ganho 0,6 ou menos).'}
+- Mantenha hierarquia: efeitos na frente, ambiência ou música claramente por baixo, no máximo ~3 sons ao mesmo tempo, e pequenos silêncios para as batidas grandes aparecerem. Paleta fiel ao meio, nada de "swooshes" genéricos.`);
+  const sk=skOn().map(x=>'- '+skText(x.value,L));
+  if(sk.length) P.push((EN?'CRAFT CHECKS\n':'CHECAGENS DE OFÍCIO\n')+sk.join('\n'));
+  if(mp4) P.push(EN?`If you are Claude Code with a shell: render an MP4 by loading the file in headless Chrome (e.g. puppeteer), calling window.seek(i/30) for each frame, capturing the canvas and piping the frames into ffmpeg.${snd==='none'?'':` Render the effects to a WAV with \`SOUND.renderOffline(window.scoreSound, DURATION, 48000, { voiceover: ${snd==='vo'} })\` (it returns interleaved stereo floats) and mux it in.`}`
+    :`Se você for o Claude Code com shell: renderize um MP4 carregando o arquivo no Chrome headless (ex.: puppeteer), chamando window.seek(i/30) para cada quadro, capturando o canvas e enviando os quadros para o ffmpeg.${snd==='none'?'':` Renderize os efeitos num WAV com \`SOUND.renderOffline(window.scoreSound, DURATION, 48000, { voiceover: ${snd==='vo'} })\` (retorna floats estéreo intercalados) e junte ao vídeo.`}`);
+  P.push(`STYLE CARD\nName: ${st.name}\nFamily: ${st.family}\nLook: ${st.look}\nMotion: ${st.motion}\nHow it explains: ${st.how}`);
+  P.push('H HELPER LIBRARY (lib/harness.js; the registerStyle/H.render parts are only needed by the original gallery)\n```js\n'+DATA.shared.H+'```');
+  if(snd!=='none') P.push('SOUND KIT (lib/sound.js)\n```js\n'+DATA.shared.SOUND+'```');
+  if(src) P.push(`REFERENCE STYLE SOURCE (${st.file}; W/H_ are always 1280x720)\n`+'```js\n'+st.source+'```');
+  emit(P, 1+(src?1:0)+(snd!=='none'?1:0));
+}
+function emit(P,tail){
+  const full=P.join('\n\n')+'\n';
+  $('out').textContent=full.length>60000?full.slice(0,60000)+`\n\n… (${(full.length-60000).toLocaleString('pt-BR')} caracteres a mais — o botão Copiar leva o prompt inteiro)`:full;
+  $('out')._full=full; $('out')._brief=P.slice(0,P.length-tail).join('\n\n');
+  $('stats').textContent=`${full.length.toLocaleString('pt-BR')} caracteres · ~${Math.round(full.length/3.6/1000)} mil tokens`;
+}
+/* ---------------- identidades ---------------- */
+const IDS={
+  generico:{nome:'Genérico',name:'',cores:'',bg:'',logo:'',info:'Sem identidade fixa: o estilo escolhido define cores e letras.'},
+  tribemd:{nome:'TribeMD',name:'TribeMD',cores:'roxo #563F99, lilás #B58FFF, off-white #F3F3F3, cinza #2A2A2A / #7F7F7F',bg:'#FFFFFF',logo:'logos/tribemd-roxo.png',file:'Logo TribeMD (com ou sem slogan) ou TribeMD_branco roxo',
+    info:'Roxo #563F99 e lilás #B58FFF, off-white #F3F3F3, Montserrat. Marca diferente da TribeMD Academy.',
+    en:`BRAND IDENTITY: TribeMD (NOT TribeMD Academy)
+- TribeMD and TribeMD Academy are two different brands. This piece is for TribeMD: do not use the TribeMD Academy logo, the word "academy" or the Academy's orange-on-black identity.
+- Colours: main purple #563F99, secondary purple #B58FFF, white #F3F3F3 (the brand white is this off-white, never pure #FFFFFF), primary grey #2A2A2A, secondary grey #7F7F7F.
+- Type: Montserrat for all text. Load it: <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=block">, and use it for all brand text instead of the style's fonts.
+- Logo: use only the official files, unaltered ("Logo TribeMD": "Tribe" in purple, "MD" in grey, an arc of dots fading purple to grey, optional slogan "FROM CREDIBILITY TO CARE", on a white background, for light scenes; "TribeMD_branco roxo": "Tribe" and dots in white, "MD" and slogan in lilac #B58FFF, transparent, for purple or dark scenes; I will attach the one that fits). If the logo has no transparent background, place it on a plate whose colour matches the logo's own background. If the logo is missing, ask me before building.
+- Keep the chosen style's medium, but map its palette onto purple #563F99 with #B58FFF as the accent, off-white and greys.`,
+    pt:`IDENTIDADE DA MARCA: TribeMD (NÃO é a TribeMD Academy)
+- TribeMD e TribeMD Academy são marcas diferentes. Esta peça é da TribeMD: não use o logo da TribeMD Academy, a palavra "academy" nem a identidade laranja sobre preto da Academy.
+- Cores: roxo principal #563F99, roxo secundário #B58FFF, branco #F3F3F3 (o branco da marca é este off-white, nunca o branco puro #FFFFFF), cinza primário #2A2A2A, cinza secundário #7F7F7F.
+- Tipografia: Montserrat em todos os textos. Carregue: <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=block">, e use-a em todo texto da marca no lugar das fontes do estilo.
+- Logo: use só os arquivos oficiais, sem alterar nada ("Logo TribeMD": "Tribe" roxo, "MD" cinza, arco de pontos do roxo ao cinza, slogan opcional "FROM CREDIBILITY TO CARE", com fundo branco, para cenas claras; "TribeMD_branco roxo": "Tribe" e pontos brancos, "MD" e slogan lilás #B58FFF, fundo transparente, para cenas roxas ou escuras; vou anexar o que servir). Se o logo não tiver fundo transparente, coloque-o sobre uma placa da mesma cor do fundo do próprio logo. Se faltar o logo, me pergunte antes de construir.
+- Mantenha o meio do estilo escolhido, mas traduza a paleta dele para o roxo #563F99, com #B58FFF de acento, off-white e cinzas.`},
+  tribemdacademy:{nome:'TribeMD Academy',name:'TribeMD Academy',cores:'preto #000000 / grafite #0B0B0B, laranja #FF9400, branco #FFFFFF',bg:'#0B0B0B',logo:'logos/tribemdacademy.png',file:'tribemd-academy_branco-laranja_fundo-escuro.png',
+    info:'Fundo preto, laranja #FF9400 como único acento, texto branco, Poppins. Não confundir com a TribeMD.',
+    en:`BRAND IDENTITY: TribeMD Academy (NOT TribeMD)
+- TribeMD Academy and TribeMD are two different brands; this piece is for TribeMD Academy.
+- Background: black #000000 to graphite #0B0B0B. Main text white #FFFFFF; secondary text light grey ~#BDBDBD; notes mid grey ~#8C8C8C.
+- One single accent: orange #FF9400 (video; #F29000 in print). Use it only where the eye must go (the key part of a headline, eyebrows, numbers, icons, CTA). Never introduce other accent colours.
+- Type: Poppins (Light, Regular, Medium, SemiBold, Bold, ExtraBold), a geometric sans. Load it too: <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=block">, and use it for all brand text instead of the style's fonts.
+- Logo: "Tribe" in white, "MD" and "academy" in orange #F39200, on a dark background (file tribemd-academy_branco-laranja_fundo-escuro.png, I will attach it).
+- Text motion: line by line, fade plus a short rise (~26 px), lighting up from grey to its final colour, ~0.3 s between lines.
+- Keep the chosen style's medium, but map its palette onto this identity: black ground, white type, orange as the only accent.`,
+    pt:`IDENTIDADE DA MARCA: TribeMD Academy (NÃO é a TribeMD)
+- TribeMD Academy e TribeMD são marcas diferentes; esta peça é da TribeMD Academy.
+- Fundo: preto #000000 a grafite #0B0B0B. Texto principal branco #FFFFFF; secundário cinza claro ~#BDBDBD; notas cinza médio ~#8C8C8C.
+- Um único acento: laranja #FF9400 (vídeo; #F29000 em impresso). Use só onde o olhar precisa ir (parte-chave do título, eyebrows, números, ícones, CTA). Nunca introduza outras cores de destaque.
+- Tipografia: Poppins (Light, Regular, Medium, SemiBold, Bold, ExtraBold), sans geométrica. Carregue também: <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=block">, e use-a em todo texto da marca no lugar das fontes do estilo.
+- Logo: "Tribe" em branco, "MD" e "academy" em laranja #F39200, sobre fundo escuro (arquivo tribemd-academy_branco-laranja_fundo-escuro.png, vou anexar).
+- Movimento de texto: linha a linha, fade com subida curta (~26 px), acendendo de cinza para a cor final, ~0,3 s entre linhas.
+- Mantenha o meio do estilo escolhido, mas traduza a paleta dele para esta identidade: fundo preto, texto branco e laranja como único acento.`},
+  oncologia:{nome:'Oncologia Brasil',name:'Oncologia Brasil',cores:'azul-escuro #144C6F, verde-água #69C2C4, branco',bg:'#FFFFFF',logo:'logos/oncologia.png',file:'oncologia-brasil_colorido_fundo-claro.png',
+    info:'Azul-escuro #144C6F e verde-água #69C2C4; o logo é para fundo claro.',
+    en:`BRAND IDENTITY: Oncologia Brasil
+- Colours (taken from the official logo): deep blue #144C6F (main) and aqua #69C2C4 (accent), on white or very light grounds.
+- Logo: the coloured version is made for light backgrounds (file oncologia-brasil_colorido_fundo-claro.png, I will attach it). On a dark ground the deep blue disappears: place it on a white plate or card.
+- Official typeface not on record: use the style's own lettering, or ask me.
+- Keep the chosen style's medium, but map its palette onto these two colours.`,
+    pt:`IDENTIDADE DA MARCA: Oncologia Brasil
+- Cores (tiradas do logo oficial): azul-escuro #144C6F (principal) e verde-água #69C2C4 (acento), sobre fundo branco ou bem claro.
+- Logo: a versão colorida é para fundo claro (arquivo oncologia-brasil_colorido_fundo-claro.png, vou anexar). Em fundo escuro o azul some: coloque o logo numa placa ou cartão branco.
+- Fonte oficial não registrada: use as letras do próprio estilo ou me pergunte.
+- Mantenha o meio do estilo escolhido, mas traduza a paleta dele para estas duas cores.`},
+  bipp:{nome:'Bipp',name:'grupo bipp',cores:'teal-escuro #034554, amarelo #FBB500 (sub-marcas: verde #8DC63F, azul #26BADB)',bg:'#FFFFFF',logo:'logos/bipp.png',file:'grupo-bipp_colorido_fundo-claro.png',
+    info:'Teal-escuro #034554 e amarelo #FBB500; sub-marcas com verde #8DC63F e azul #26BADB.',
+    en:`BRAND IDENTITY: grupo bipp
+- Colours (taken from the official logos): dark teal #034554 (main) and yellow #FBB500 (accent). Sub-brands: revisa bipp green #8DC63F; bipp prime light blue #26BADB with yellow #F9B517.
+- Logo: the coloured version is made for light backgrounds (file grupo-bipp_colorido_fundo-claro.png, I will attach it). On a dark ground the teal text loses contrast: place it on a white plate.
+- Official typeface not on record: use the style's own lettering, or ask me.
+- Keep the chosen style's medium, but map its palette onto teal plus yellow.`,
+    pt:`IDENTIDADE DA MARCA: grupo bipp
+- Cores (tiradas dos logos oficiais): teal-escuro #034554 (principal) e amarelo #FBB500 (acento). Sub-marcas: revisa bipp verde #8DC63F; bipp prime azul-claro #26BADB com amarelo #F9B517.
+- Logo: a versão colorida é para fundo claro (arquivo grupo-bipp_colorido_fundo-claro.png, vou anexar). Em fundo escuro o texto teal perde contraste: coloque numa placa branca.
+- Fonte oficial não registrada: use as letras do próprio estilo ou me pergunte.
+- Mantenha o meio do estilo escolhido, mas traduza a paleta dele para teal e amarelo.`},
+  hemomeeting:{nome:'Hemomeeting',name:'Hemomeeting',cores:'vermelho #FF0000 / #F6322F, branco',bg:'#FFFFFF',logo:'logos/hemomeeting.png',file:'hemomeeting_vermelho_fundo-claro.png (ou hemomeeting_branco_fundo-escuro.png)',
+    info:'Vermelho vivo #FF0000; versão branca para fundo escuro.',
+    en:`BRAND IDENTITY: Hemomeeting
+- Colours (taken from the official logo): vivid red #FF0000 / #F6322F, with white.
+- Logo: red version for light backgrounds (hemomeeting_vermelho_fundo-claro.png) and white version for dark backgrounds (hemomeeting_branco_fundo-escuro.png, preferred on black). I will attach the one that fits.
+- Avoid putting the red right next to orange without a white plate between them.
+- Official typeface not on record: use the style's own lettering, or ask me.
+- Keep the chosen style's medium, but map its accent colour onto this red.`,
+    pt:`IDENTIDADE DA MARCA: Hemomeeting
+- Cores (tiradas do logo oficial): vermelho vivo #FF0000 / #F6322F, com branco.
+- Logo: versão vermelha para fundo claro (hemomeeting_vermelho_fundo-claro.png) e versão branca para fundo escuro (hemomeeting_branco_fundo-escuro.png, preferida sobre preto). Vou anexar a que servir.
+- Evite o vermelho colado ao laranja sem uma placa branca entre eles.
+- Fonte oficial não registrada: use as letras do próprio estilo ou me pergunte.
+- Mantenha o meio do estilo escolhido, mas traduza a cor de destaque dele para este vermelho.`}};
+let IDK='generico';
+function renderIds(){
+  $('ids').innerHTML=Object.entries(IDS).map(([k,o])=>`<button data-k="${k}" aria-pressed="${k===IDK}">${esc(o.nome)}</button>`).join('');
+  $('ids').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>applyId(b.dataset.k)));
+  const o=IDS[IDK];
+  $('idcard').innerHTML=`<p>${esc(o.info)}${o.cores?'<br>Cores: '+esc(o.cores):''}${o.file?'<br>Anexe na conversa: <b>'+esc(o.file)+'</b>':''}</p>${o.logo?`<img src="${o.logo}" alt="Logo ${esc(o.nome)}" style="background:${o.bg}">`:''}`;
+}
+function applyId(k){
+  IDK=k; const o=IDS[k];
+  if(k!=='generico'){ $('vname').value=o.name; $('vcol').value=o.cores; $('vlogo').value=''; $('vfile').checked=true; }
+  else { $('vname').value=''; $('vcol').value=''; $('vfile').checked=false; }
+  renderIds(); build(); save();
+  if(k!=='generico') toast('Identidade '+o.nome+' aplicada ao prompt');
+}
+const idBlock=(L)=>IDS[IDK][L]||'';
+/* ---------------- vinheta ---------------- */
+const VT={
+  intro:{d:4,en:'channel intro / logo sting',pt:'intro de canal / logo sting'},
+  bumper:{d:2,en:'short bumper (logo hit)',pt:'bumper curto (batida do logo)'},
+  abertura:{d:6,en:'show / segment opener',pt:'abertura de programa ou quadro'},
+  outro:{d:20,en:'outro / end screen',pt:'outro / tela final'},
+  transicao:{d:1.5,en:'transition stinger between segments',pt:'transição (stinger) entre blocos'}};
+const VSTRUCT={
+  intro:{en:(D)=>`Three beats plus a hold, about ${D} s in total (keep it at 5 s or less; longer intros lose viewers):
+- Windup (0 to IMPACT, about 0.8-1.2 s): motion builds tension in the medium's own way; the logo is not readable yet.
+- Impact (IMPACT, a constant in the code): the logo snaps to full on the biggest sound hit, with a flash done the medium's way (a light bloom, a copier flash, a plate slam, an ink pulse...).
+- Settle (IMPACT to +0.4 s): the overshoot relaxes to rest; the slogan arrives.
+- Hold (to the end): the brand stays legible with a little living motion, then the piece ends clean so content can cut in.`,
+    pt:(D)=>`Três tempos e uma pausa, cerca de ${D} s no total (no máximo 5 s; intros longas perdem audiência):
+- Preparação (0 até IMPACT, cerca de 0,8-1,2 s): o movimento cria tensão do jeito do próprio meio; o logo ainda não é legível.
+- Impacto (IMPACT, uma constante no código): o logo aparece inteiro de uma vez na batida mais forte do som, com um clarão feito do jeito do meio (brilho de luz, flash de copiadora, batida de chapa, pulso de tinta...).
+- Assentamento (IMPACT até +0,4 s): o overshoot relaxa até parar; o slogan entra.
+- Pausa (até o fim): a marca fica legível com um pouco de movimento vivo e a peça termina limpa para o conteúdo entrar.`},
+  bumper:{en:(D)=>`One hit, about ${D} s: a very short windup (0.2-0.5 s), the logo lands on IMPACT with the sound hit, then a brief hold. No slogan unless it fits in the hold.`,
+    pt:(D)=>`Uma batida, cerca de ${D} s: preparação curtíssima (0,2-0,5 s), o logo pousa no IMPACT junto com a batida do som e segura um instante. Slogan só se couber na pausa.`},
+  abertura:{en:(D)=>`About ${D} s: a short build (1-1.5 s) that sets the medium and the mood, the show or segment name lands as the main kinetic headline on IMPACT, the brand logo sits as a smaller signature, the extra text (segment name or episode) follows, and the last ~1.5 s holds the full lock-up.`,
+    pt:(D)=>`Cerca de ${D} s: uma construção curta (1-1,5 s) que apresenta o meio e o clima, o nome do programa ou quadro pousa como o título principal no IMPACT, o logo da marca fica como assinatura menor, o texto extra (quadro ou episódio) vem em seguida, e o último ~1,5 s segura a composição completa.`},
+  outro:{en:(D)=>`A held end plate of about ${D} s (at least 20 s if it hosts YouTube end-screen elements): a short reveal (under 1.5 s) into a calm layout that keeps only a subtle living motion, never anything that competes with the cards. The last frame loops cleanly into a freeze.`,
+    pt:(D)=>`Uma tela final de cerca de ${D} s (no mínimo 20 s se for receber os elementos de tela final do YouTube): uma entrada curta (menos de 1,5 s) para um layout calmo que mantém só um movimento sutil, nada que dispute atenção com os cards. O último quadro pode congelar sem salto.`},
+  transicao:{en:(D)=>`About ${D} s: a full-frame wipe done the medium's own way (an ink wash, a plate slide, a light sweep, a sheet slapped down...) that fully covers the screen at MID = DURATION/2 (a constant), so the editor can hide the cut on that frame, then uncovers by the end. A quick logo or brand-colour flash on MID is optional. Frame 0 and the last frame must be transparent-looking edges of the effect (or fully clear) so it can be laid over footage.`,
+    pt:(D)=>`Cerca de ${D} s: uma cortina que cobre a tela inteira do jeito do próprio meio (mancha de tinta, chapa deslizando, varrida de luz, folha batendo...) e cobre tudo em MID = DURATION/2 (uma constante), para o editor esconder o corte nesse frame, e depois descobre até o fim. Um flash rápido do logo ou da cor da marca no MID é opcional. O primeiro e o último quadro devem ser as bordas do efeito (ou tela limpa) para dar para sobrepor ao vídeo.`}};
+const VPLAT={
+  youtube:{en:(o)=>o?'Platform: YouTube end screen. Treat the frame as thirds: the brand, name and call to action live in the LEFT third only; leave the RIGHT two thirds quiet for YouTube\'s clickable elements (next-video card 615x345 and subscribe circle 294x294 at 1920x1080; scale these to the canvas). Draw dashed placeholder guides for those zones behind a SHOW_GUIDES flag that is false in the final render. Keep the bottom UI band and corners clear.':'Platform: YouTube. Keep the logo and text inside the central 80% of the frame.',
+    pt:(o)=>o?'Plataforma: tela final do YouTube. Divida o quadro em terços: marca, nome e chamada ficam só no terço ESQUERDO; deixe os dois terços da DIREITA calmos para os elementos clicáveis do YouTube (card de próximo vídeo 615x345 e círculo de inscrição 294x294 em 1920x1080; ajuste à escala do canvas). Desenhe guias tracejadas dessas áreas com uma flag SHOW_GUIDES que fica false no render final. Deixe livres a faixa de baixo e os cantos.':'Plataforma: YouTube. Mantenha logo e textos nos 80% centrais do quadro.'},
+  social:{en:()=>'Platform: Reels / TikTok / Shorts. Keep the logo and any text out of the top 12% and bottom 22% of the frame and the right 12% (the app\'s buttons and captions sit there).',pt:()=>'Plataforma: Reels / TikTok / Shorts. Mantenha logo e textos fora dos 12% de cima, dos 22% de baixo e dos 12% da direita do quadro (ali ficam os botões e legendas do app).'},
+  tv:{en:()=>'Platform: TV / broadcast. Keep text inside title-safe (central 90%) and all motion that matters inside action-safe (central 93%); avoid one-pixel lines that flicker on interlaced displays.',pt:()=>'Plataforma: TV / broadcast. Textos dentro da área segura de título (90% centrais) e todo movimento importante dentro da área segura de ação (93% centrais); evite linhas de 1 pixel que tremem em telas entrelaçadas.'},
+  evento:{en:()=>'Platform: big screen at an event. Everything must read from the back of the room: no text under 56 px at 1280x720, high contrast, and no fine detail that only works up close.',pt:()=>'Plataforma: telão em evento. Tudo precisa ser lido do fundo da sala: nenhum texto abaixo de 56 px em 1280x720, alto contraste e nenhum detalhe fino que só funcione de perto.'}};
+const VTECH={
+  auto:{en:'Pick ONE reveal technique that suits both the logo and this medium (draw-on, build-on, mask wipe, morph or per-letter) and say which you chose and why.',pt:'Escolha UMA técnica de revelação que combine com o logo e com este meio (traço, montagem, máscara, morph ou letra por letra) e diga qual escolheu e por quê.'},
+  draw:{en:'Reveal: stroke draw-on. The logo\'s outlines draw themselves in the medium\'s own line (marker, ink, light trail...), then the fills settle in.',pt:'Revelação: traço se desenhando. Os contornos do logo se desenham com a linha do próprio meio (marcador, tinta, rastro de luz...) e depois os preenchimentos assentam.'},
+  build:{en:'Reveal: build-on. The mark\'s pieces arrive one by one with a small stagger (base first, then accents, wordmark last so the eye ends on the name).',pt:'Revelação: montagem. As peças do logo chegam uma a uma com um pequeno escalonamento (base primeiro, depois detalhes, o nome por último para o olhar terminar nele).'},
+  mask:{en:'Reveal: mask wipe. A mask shaped the medium\'s way (an ink wash, a plate slide, a light sweep, a torn sheet...) uncovers the mark.',pt:'Revelação: máscara. Uma máscara no formato do meio (mancha de tinta, chapa deslizando, varrida de luz, papel rasgado...) descobre o logo.'},
+  morph:{en:'Reveal: morph. The icon transforms into the full logo or wordmark; match point counts so the shape interpolates cleanly.',pt:'Revelação: morph. O ícone se transforma no logo completo ou no nome; iguale o número de pontos para a forma interpolar sem quebrar.'},
+  letters:{en:'Reveal: per letter. The wordmark builds letter by letter with a 20-40 ms stagger, the icon (if any) landing on IMPACT.',pt:'Revelação: letra por letra. O nome se monta letra a letra com escalonamento de 20-40 ms, e o ícone (se houver) pousa no IMPACT.'}};
+function buildVin(){
+  const st=cur, L=$('plang').value, EN=L==='en', v=f=>$(f).value.trim();
+  const vt=$('vtype').value, T=VT[vt], D=Math.max(1,Math.min(90,+$('dur').value||T.d)), A=ASP[$('asp').value], ref169=$('asp').value==='169';
+  const aud=$('vaud').value, sound=aud!=='none', sb=$('sb').checked, mp4=$('mp4').checked, src=$('src').checked, P=[];
+  const kindName=EN?T.en:T.pt;
+  const Ds=EN?String(D):String(D).replace('.',',');
+  P.push(EN?`I want a vinheta (a branded ${kindName}, about ${Ds} s) made in the "${st.name}" visual style (${st.family}). Below is ${src?'the complete source code of a reference animation in this exact style':'the style card of this exact style'}, plus a small sound-effects kit. Use them as your style guide and rebuild it around my brand.`
+           :`Quero uma vinheta (${kindName} da marca, cerca de ${Ds} s) no estilo visual "${st.name}" (${st.family}). Abaixo está ${src?'o código-fonte completo de uma animação de referência exatamente neste estilo':'o cartão deste estilo'}, mais um pequeno kit de efeitos sonoros. Use-os como guia de estilo e reconstrua tudo em volta da minha marca.`);
+  const b=[];
+  if(!v('vname')&&!v('vlogo')&&!$('vfile').checked) b.push(EN?'[Brand name and logo missing. Ask me for them before building.]':'[Faltam o nome da marca e o logo. Me pergunte antes de construir.]');
+  if(v('vname')) b.push((EN?'Brand / channel name: ':'Nome da marca / canal: ')+v('vname'));
+  if(v('vtag')) b.push((EN?'Slogan: ':'Slogan: ')+v('vtag'));
+  const LF={en:'Logo: I am attaching the logo file. It is the source of truth: for an SVG, turn its paths into canvas Path2D objects and keep the geometry exact; for a PNG, draw the image itself (or trace it faithfully). Do not redraw it from memory. Embed it in the HTML as a data URI so the file stays self-contained, and decode it once before the first frame.',pt:'Logo: vou anexar o arquivo do logo. Ele é a referência oficial: se for SVG, converta os caminhos em objetos Path2D do canvas e mantenha a geometria exata; se for PNG, desenhe a própria imagem (ou trace com fidelidade). Não redesenhe de memória. Incorpore o arquivo no HTML como data URI para continuar autocontido e decodifique uma vez antes do primeiro quadro.'};
+  if($('vfile').checked) b.push(LF[L]+(v('vlogo')?(EN?' Notes about it: ':' Observações: ')+v('vlogo'):''));
+  else if(v('vlogo')) b.push((EN?'Logo (no file; draw it faithfully from this description and list anything you had to assume): ':'Logo (sem arquivo; desenhe com fidelidade a partir desta descrição e liste o que precisou supor): ')+v('vlogo'));
+  else if(v('vname')) b.push(EN?'Logo: none given. Build a typographic wordmark of the brand name in the style\'s own lettering.':'Logo: não foi enviado. Crie um logotipo tipográfico com o nome da marca, nas letras do próprio estilo.');
+  if(v('vcol')) b.push((EN?'Brand colours: ':'Cores da marca: ')+v('vcol')+(EN?'. Map them into the style\'s own inks, lights or materials (they replace the reference\'s accent colours); do not paste a flat brand palette over the medium.':'. Traduza-as para as tintas, luzes ou materiais do próprio estilo (elas substituem as cores de destaque da referência); não cole uma paleta chapada por cima do meio.'));
+  if(v('vcta')) b.push((EN?'Extra text: ':'Texto extra: ')+v('vcta'));
+  b.push(EN?`On-screen text language: ${v('lang')}. Check that every accent and glyph renders in the style's fonts.`:`Idioma do texto na tela: ${v('lang')}. Confira se todo acento e glifo aparece nas fontes do estilo.`);
+  b.push(VPLAT[$('vplat').value][L](vt==='outro'));
+  if(v('vnotes')) b.push((EN?'Notes: ':'Observações: ')+v('vnotes'));
+  P.push((EN?'MY BRAND:\n':'MINHA MARCA:\n')+b.join('\n'));
+  if(idBlock(L)) P.push(idBlock(L));
+  if(sb) P.push(EN?`STORYBOARD FIRST: before building, make a small VISUAL storyboard and wait for my OK.
+- One HTML page (show it as an artifact if you can) with 4-6 panels: ${vt==='transicao'?'start, building, fully covered (MID), uncovering, end':vt==='outro'?'reveal start, reveal end, the held plate (with the guides on), the held plate (final, guides off)':'windup, the IMPACT frame, settle, slogan in, final hold'}. Each panel is a canvas showing that key frame drawn in this style with the H library and the reference's own drawing, texture and finishing functions, so it already looks like the finished piece.
+- Under each panel: its time, the exact on-screen text, what moves, and its sound.
+- Below the panels: the reveal technique you chose and anything you had to assume about the logo.
+When I approve it (or after my changes), build the full vinheta exactly as storyboarded, reusing the storyboard's drawing code.`
+  :`STORYBOARD PRIMEIRO: antes de construir, faça um pequeno storyboard VISUAL e espere meu OK.
+- Uma página HTML (mostre como artefato, se puder) com 4-6 painéis: ${vt==='transicao'?'início, cobrindo, tela toda coberta (MID), descobrindo, fim':vt==='outro'?'início da entrada, fim da entrada, a tela parada (com as guias), a tela parada (final, sem guias)':'preparação, o frame IMPACT, assentamento, entrada do slogan, pausa final'}. Cada painel é um canvas com esse quadro-chave desenhado neste estilo, com a biblioteca H e as funções de desenho, textura e acabamento da referência, para já parecer a peça final.
+- Sob cada painel: o tempo, o texto exato na tela, o que se move e o som.
+- Abaixo dos painéis: a técnica de revelação escolhida e o que precisou supor sobre o logo.
+Quando eu aprovar (ou depois das minhas mudanças), construa a vinheta completa exatamente como no storyboard, reaproveitando o código de desenho dele.`);
+  else P.push(EN?'NO STORYBOARD STOP: plan the key frames yourself, keep the timings as constants in the file, and build the full vinheta directly. Say which reveal technique you used and anything you assumed about the logo.':'SEM PARADA PARA STORYBOARD: planeje os quadros-chave você mesmo, guarde os tempos como constantes no arquivo e construa a vinheta completa direto. Diga qual técnica de revelação usou e o que supôs sobre o logo.');
+  P.push(EN?`WHAT TO BUILD
+One self-contained HTML file (show it as an artifact if you can):
+- ${A.en}, scaled to fit the window with letterboxing, and a small control bar: play/pause, a scrub slider, the current time${sound?', a sound on/off toggle':''}, and loop on by default.
+- A new \`explainer(ctx, W, H_, t)\` (keep this name so the player and renderer stay the same) that draws MY vinheta in this style. Set the length in a DURATION constant (${D} s) and the key moments as constants (${vt==='transicao'?'MID':'IMPACT'}${vt==='abertura'?', TITLE':''}).
+${sound?`- A \`scoreSound(k)\` function that schedules the sound with the SOUND kit below. Play it in sync from the player: on play call \`stopSound = SOUND.live(scoreSound, currentT, { voiceover: false })\`, and call \`stopSound()\` on pause, on seek and when the sound toggle is turned off.`:'- No sound: leave out scoreSound and the sound toggle, and expose `window.scoreSound = null`.'}
+- Include the H helper library ${sound?'and the SOUND kit ':''}below unchanged, and keep the reference's own helper functions where they are useful.
+- Load these Google Fonts before the first draw (await document.fonts.load for each spec you use): ${st.fontsLine}
+  <link rel="stylesheet" href="${st.link}">
+- Expose \`window.seek = (t) => { /* draw frame at time t */ }\`, \`window.DURATION\`, \`window.scoreSound\` and \`window.${vt==='transicao'?'MID':'IMPACT'}\`, so the piece can be rendered frame by frame to video later.${$('vloop').checked?'\n- Also a LOOP mode (a flag in the code and a toggle in the control bar): after the reveal, only the ambient motion of the medium keeps going, built so the last frame matches frame 0 exactly; the logo stays still.':''}`
+  :`O QUE CONSTRUIR
+Um único arquivo HTML autocontido (mostre como artefato, se puder):
+- ${A.pt}, escalado para caber na janela com letterbox, e uma pequena barra de controle: play/pause, slider de tempo, tempo atual${sound?', botão de som liga/desliga':''} e loop ligado por padrão.
+- Uma nova \`explainer(ctx, W, H_, t)\` (mantenha esse nome para o player e o render continuarem iguais) que desenha MINHA vinheta neste estilo. Defina a duração numa constante DURATION (${Ds} s) e os momentos-chave como constantes (${vt==='transicao'?'MID':'IMPACT'}${vt==='abertura'?', TITLE':''}).
+${sound?`- Uma função \`scoreSound(k)\` que agenda o som com o kit SOUND abaixo. Toque em sincronia pelo player: ao dar play chame \`stopSound = SOUND.live(scoreSound, currentT, { voiceover: false })\` e chame \`stopSound()\` ao pausar, ao pular no tempo e ao desligar o som.`:'- Sem som: deixe de fora scoreSound e o botão de som, e exponha `window.scoreSound = null`.'}
+- Inclua a biblioteca H ${sound?'e o kit SOUND ':''}abaixo sem alterações, e mantenha as funções auxiliares da referência onde forem úteis.
+- Carregue estas Google Fonts antes do primeiro desenho (await document.fonts.load para cada especificação usada): ${st.fontsLine}
+  <link rel="stylesheet" href="${st.link}">
+- Exponha \`window.seek = (t) => { /* desenha o quadro no tempo t */ }\`, \`window.DURATION\`, \`window.scoreSound\` e \`window.${vt==='transicao'?'MID':'IMPACT'}\`, para a peça poder ser renderizada quadro a quadro em vídeo depois.${$('vloop').checked?'\n- Também um modo LOOP (uma flag no código e um botão na barra): depois da revelação, só o movimento ambiente do meio continua, feito para o último quadro bater exatamente com o quadro 0; o logo fica parado.':''}`);
+  P.push(EN?`HOW TO STAY IN THE STYLE
+- Reuse the reference's rendering techniques, palette, textures, lettering, line quality, transitions and timing feel. Change the content to my brand; do not change the medium.
+- Don't carry over the reference's props, characters or icons. The only subject is my brand.
+- The surface texture and finishing passes are what make the style read as the real medium (paper grain, ink pooling, misregistration, grain, glow, scanlines and so on). Copy those functions from the reference and run them on every frame at the same strength, including over the logo. Don't simplify or skip them.
+- Every frame is a pure function of t: create all randomness from H.rng(seed) / H.makeNoise(seed) inside the draw (never Math.random), so the same t always gives the same frame. Caching static textures and the decoded logo across frames is fine.
+- Size: ${ref169?'at 1280x720':`at ${A.w}x${A.h}`} the brand name or show title is at least 64 px, the slogan and any text the viewer must read at least 36 px, and the logo fills a confident part of the frame (roughly 25-45% of the shorter side) with clearspace around it.${ref169?'':' The reference was composed for 1280x720: re-lay out for this frame instead of cropping it.'} Keep frames fast (well under 100 ms each).
+- In the reference, \`draw()\` is the single hero frame of the style: its opening seconds (how the medium builds up) are the closest model for a vinheta. \`explainer()\` and \`explainerSound(k)\` show the medium's transitions, emphasis moves and sound palette. Do not reuse their topic.`
+  :`COMO FICAR NO ESTILO
+- Reaproveite as técnicas de renderização, paleta, texturas, letras, qualidade de linha, transições e sensação de ritmo da referência. Troque o conteúdo pela minha marca; não mude o meio.
+- Não traga objetos, personagens ou ícones da referência. O único assunto é a minha marca.
+- As texturas de superfície e os passes de acabamento é que fazem o estilo parecer o meio real (granulação do papel, acúmulo de tinta, desregistro, grão, brilho, scanlines etc.). Copie essas funções da referência e rode-as em todo quadro com a mesma intensidade, inclusive sobre o logo. Não simplifique nem pule.
+- Todo quadro é função pura de t: gere toda aleatoriedade com H.rng(seed) / H.makeNoise(seed) dentro do desenho (nunca Math.random), para o mesmo t sempre dar o mesmo quadro. Guardar em cache texturas estáticas e o logo decodificado é permitido.
+- Tamanho: ${ref169?'em 1280x720':`em ${A.w}x${A.h}`} o nome da marca ou do programa tem pelo menos 64 px, o slogan e qualquer texto que o público precise ler pelo menos 36 px, e o logo ocupa uma parte confiante do quadro (cerca de 25-45% do lado menor) com respiro em volta.${ref169?'':' A referência foi composta em 1280x720: recomponha para este formato em vez de recortar.'} Mantenha os quadros rápidos (bem abaixo de 100 ms cada).
+- Na referência, \`draw()\` é o quadro-herói do estilo: seus segundos iniciais (como o meio se constrói) são o modelo mais próximo de uma vinheta. \`explainer()\` e \`explainerSound(k)\` mostram as transições, os movimentos de ênfase e a paleta sonora do meio. Não reaproveite o tema deles.`);
+  P.push((EN?'STRUCTURE\n':'ESTRUTURA\n')+VSTRUCT[vt][L](Ds)+'\n'+(vt==='transicao'||vt==='outro'?'':(EN?'- ':'- ')+VTECH[$('vtech').value][L]));
+  if(sound) P.push(aud==='own'?(EN?`SOUND
+- I will supply my own audio sting. Build every reveal relative to \`IMPACT\` so I can set it to my audio's loudest transient; until then, write a quiet placeholder score in the medium's palette in scoreSound.
+- For the MP4, mux my audio file with its loudest transient exactly on the IMPACT frame.`:`SOM
+- Vou fornecer meu próprio áudio de vinheta. Construa toda revelação em relação a \`IMPACT\`, para eu poder ajustá-lo ao pico mais forte do meu áudio; até lá, escreva em scoreSound uma trilha provisória discreta na paleta do meio.
+- No MP4, junte meu arquivo de áudio com o pico mais forte exatamente no frame IMPACT.`)
+   :(EN?`SOUND (a sound logo)
+- Sync is everything: every sound starts on the exact frame its event appears.
+- Write a sound logo in the medium's own palette (paper, ink, glass, light, print, chip...): a windup that builds to the reveal, the single biggest hit landing exactly on the ${vt==='transicao'?'MID':'IMPACT'} frame, then a short resolving tail (two or three notes or one chord) under the hold. This is a deliberate stinger, so the hit may jump out; keep everything else clearly under it.
+- Text and small pieces arriving get small, medium-true sounds; no generic swooshes.${vt==='outro'?'\n- Under the held end plate, a quiet bed or a soft loopable music phrase (k.music, gain 0.4 or less) that can be cut at any point.':''}`
+   :`SOM (uma assinatura sonora)
+- Sincronia é tudo: cada som começa no quadro exato em que seu evento aparece.
+- Escreva uma assinatura sonora na paleta do próprio meio (papel, tinta, vidro, luz, impressão, chip...): uma preparação que cresce até a revelação, a maior batida caindo exatamente no frame ${vt==='transicao'?'MID':'IMPACT'}, depois uma cauda curta que resolve (duas ou três notas ou um acorde) sob a pausa. É um stinger proposital, então a batida pode se destacar; todo o resto fica claramente abaixo dela.
+- Textos e peças pequenas que chegam ganham sons pequenos e fiéis ao meio; nada de "swooshes" genéricos.${vt==='outro'?'\n- Sob a tela final parada, uma ambiência discreta ou uma frase musical curta que possa repetir (k.music, ganho 0,4 ou menos) e ser cortada em qualquer ponto.':''}`));
+  const sk=skOn().map(x=>'- '+skText(x.value,L));
+  sk.push(EN?`- Before delivering, render stills at ${vt==='transicao'?'0, MID and the last frame: at MID the screen is fully covered':vt==='outro'?'the end of the reveal and the held plate: the platform zones are clear':'the windup, the IMPACT frame, the settle and the last frame: on IMPACT the logo is full and legible, and the last frame is the clean, undistorted mark'}; fix and check again.`
+                :`- Antes de entregar, gere stills em ${vt==='transicao'?'0, MID e no último quadro: no MID a tela está toda coberta':vt==='outro'?'fim da entrada e tela parada: as áreas da plataforma estão livres':'preparação, frame IMPACT, assentamento e último quadro: no IMPACT o logo está inteiro e legível, e o último quadro é o logo limpo e sem distorção'}; corrija e confira de novo.`);
+  P.push((EN?'CRAFT CHECKS\n':'CHECAGENS DE OFÍCIO\n')+sk.join('\n'));
+  if(mp4) P.push(EN?`If you are Claude Code with a shell: render an MP4 by loading the file in headless Chrome (e.g. puppeteer), calling window.seek(i/30) for each frame, capturing the canvas and piping the frames into ffmpeg.${sound&&aud!=='own'?' Render the sound to a WAV with `SOUND.renderOffline(window.scoreSound, DURATION, 48000, { voiceover: false })` (it returns interleaved stereo floats) and mux it in.':''} Also export the last frame as a PNG poster.${vt==='transicao'?' If you can, also export a version with an alpha channel (ProRes 4444 or WebM VP9) so it can be laid over footage.':''}`
+    :`Se você for o Claude Code com shell: renderize um MP4 carregando o arquivo no Chrome headless (ex.: puppeteer), chamando window.seek(i/30) para cada quadro, capturando o canvas e enviando os quadros para o ffmpeg.${sound&&aud!=='own'?' Renderize o som num WAV com `SOUND.renderOffline(window.scoreSound, DURATION, 48000, { voiceover: false })` (retorna floats estéreo intercalados) e junte ao vídeo.':''} Exporte também o último quadro como PNG (pôster).${vt==='transicao'?' Se puder, exporte também uma versão com canal alfa (ProRes 4444 ou WebM VP9) para sobrepor ao vídeo.':''}`);
+  P.push(`STYLE CARD\nName: ${st.name}\nFamily: ${st.family}\nLook: ${st.look}\nMotion: ${st.motion}\nHow it explains: ${st.how}`);
+  P.push('H HELPER LIBRARY (lib/harness.js; the registerStyle/H.render parts are only needed by the original gallery)\n```js\n'+DATA.shared.H+'```');
+  if(sound) P.push('SOUND KIT (lib/sound.js)\n```js\n'+DATA.shared.SOUND+'```');
+  if(src) P.push(`REFERENCE STYLE SOURCE (${st.file}; W/H_ are always 1280x720)\n`+'```js\n'+st.source+'```');
+  emit(P, 1+(src?1:0)+(sound?1:0));
+}
+const VPRESETS=[
+  ['Intro de canal',{vtype:'intro',vname:'Ciência em 60s',vtag:'o mundo explicado rápido',vlogo:'Átomo estilizado com três órbitas finas e um ponto laranja no centro; nome em sans-serif bold à direita',vcol:'#FF6B00, azul-marinho, branco',vcta:'',vplat:'youtube'}],
+  ['Abertura de podcast',{vtype:'abertura',vname:'Conversa Aberta',vtag:'',vlogo:'Microfone de bancada dentro de um balão de fala arredondado',vcol:'verde-petróleo e creme',vcta:'Episódio 42 — Como dormir melhor',vplat:'youtube'}],
+  ['Tela final',{vtype:'outro',vname:'Ciência em 60s',vtag:'',vlogo:'Átomo estilizado com três órbitas finas e um ponto laranja no centro',vcol:'#FF6B00, azul-marinho, branco',vcta:'Inscreva-se para um vídeo novo toda semana',vplat:'youtube'}],
+];
+function setKind(k,user){
+  KIND=k; document.body.dataset.kind=k;
+  $('kExp').setAttribute('aria-pressed',k==='exp'); $('kVin').setAttribute('aria-pressed',k==='vin');
+  $('kindHint').textContent=k==='vin'?'Intro, abertura, tela final ou transição com a sua marca, de 1 a 20 s':'Vídeo que explica um assunto, de 12 a 30 s';
+  $('skillsTxt').textContent=k==='vin'?'Seguir as skills youtube-intro-outro, logo-animation e kinetic-typography se estiverem instaladas':'Seguir as skills javascript-animation, soundtrack e explainer-video se estiverem instaladas';
+  if(user){ if(k==='vin'){ durExp=+$('dur').value||durExp; $('dur').value=VT[$('vtype').value].d; } else $('dur').value=durExp; }
+  if(user && loaded[cur?.id]) setMode(k==='vin'?'hero':'exp');
+  build(); save();
+}
+$('kExp').addEventListener('click',()=>setKind('exp',true));
+$('kVin').addEventListener('click',()=>setKind('vin',true));
+$('vtype').addEventListener('change',()=>{ $('dur').value=VT[$('vtype').value].d; build(); save(); });
+$('vpresets').innerHTML=VPRESETS.map((p,i)=>`<button data-p="${i}">Exemplo: ${esc(p[0])}</button>`).join('');
+$('vpresets').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{const o=VPRESETS[+b.dataset.p][1]; for(const k in o) $(k).value=o[k]; $('dur').value=VT[o.vtype].d; build(); save();}));
+async function copy(txt,msg){ try{ await navigator.clipboard.writeText(txt); toast(msg); }catch(e){ const r=document.createRange(); r.selectNodeContents($('out')); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast('Cópia bloqueada: texto selecionado, use Ctrl+C'); } }
+$('copy').addEventListener('click',()=>copy($('out')._full||'','Prompt completo copiado'));
+$('copyShort').addEventListener('click',()=>copy($('out')._brief||'','Briefing copiado (sem código)'));
+document.querySelectorAll('input,select,textarea').forEach(el=>{ if(el.id==='scrub')return; el.addEventListener('input',()=>{build();save()}); el.addEventListener('change',()=>{build();save()}); });
+
+(async()=>{
+  restore(); renderIds(); setKind(KIND,false); if(KIND==='vin'){ mode='hero'; $('mExp').setAttribute('aria-pressed','false'); $('mHero').setAttribute('aria-pressed','true'); }
+  try{ const r=await fetch('styles.json'); DATA=await r.json(); }catch(e){ $('load').textContent='Não foi possível carregar os estilos.'; return; }
+  new Function(DATA.shared.H)(); new Function(DATA.shared.SOUND)();
+  renderRail();
+  let id=(location.hash||'').slice(1); if(!id){ try{id=localStorage.getItem('ees-style')||''}catch(e){} }
+  let i=Math.max(0,DATA.styles.findIndex(s=>s.id===id)); if(!id) i=DATA.styles.findIndex(s=>s.id==='tech-glow');
+  await select(i,false);
+  setTimeout(thumbs,400);
+  addEventListener('hashchange',()=>{const j=DATA.styles.findIndex(s=>s.id===location.hash.slice(1)); if(j>=0&&DATA.styles[j]!==cur) select(j,false)});
+})();
+}
+</script>
+</body>
+</html>
